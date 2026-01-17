@@ -1,0 +1,69 @@
+---
+description: Use this when working with anything related to frontend work. 
+alwaysApply: false
+---
+# Frontend Development Rules
+
+## General Principles
+- Write concise, readable TypeScript
+- Prefer functional components and hooks
+- Use descriptive variable names (e.g., `isLoading`, `hasError`)
+- Avoid premature optimization
+
+## TypeScript
+- Enable strict mode
+- Prefer `interface` over `type` for object shapes
+- Use `const` assertions for literal types
+- Avoid `any`; use `unknown` when type is uncertain
+- Define return types for functions
+
+## Next.js
+- Use App Router and Server Components by default
+- Client components only when needed (`'use client'`)
+- Leverage `loading.tsx`, `error.tsx`, `not-found.tsx`
+- Use `next/image` for images, `next/link` for navigation
+- Fetch data in Server Components; avoid `useEffect` for data fetching
+- Use route handlers for API endpoints
+
+## React
+- Extract reusable logic into custom hooks
+- Memoize expensive computations with `useMemo`
+- Use `useCallback` for functions passed as props
+- Prefer composition over prop drilling
+- Keep components small and focused
+
+## CSS/Styling
+- Use CSS Modules or Tailwind CSS
+- Follow mobile-first responsive design
+- Use CSS variables for theming
+- Avoid inline styles except for dynamic values
+- Use `rem`/`em` over `px` for scalability
+
+## HTML/Accessibility
+- Use semantic HTML (`<main>`, `<article>`, `<nav>`)
+- Include proper ARIA labels where needed
+- Ensure keyboard navigation works
+- Maintain logical heading hierarchy
+- Add `alt` text to all images
+
+## File Structure
+```
+src/
+  app/           # Routes and layouts
+  components/    # Reusable UI components
+  hooks/         # Custom hooks
+  lib/           # Utilities and helpers
+  types/         # TypeScript definitions
+```
+
+## Naming Conventions
+- Components: `PascalCase.tsx`
+- Hooks: `useCamelCase.ts`
+- Utilities: `camelCase.ts`
+- Types: `PascalCase` for interfaces
+
+## Performance
+- Lazy load components with `next/dynamic`
+- Optimize images and fonts
+- Minimize client-side JavaScript
+- Use Suspense boundaries strategically

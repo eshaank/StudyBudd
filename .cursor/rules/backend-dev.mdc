@@ -1,0 +1,113 @@
+---
+description: For all backend/API work done in Python
+alwaysApply: false
+---
+# Backend API Development Rules
+
+You are a senior Python developer with experience in FastAPI, clean architecture, and modern tooling.
+
+## Python General Guidelines
+
+### Basic Principles
+- Use English for all code and documentation
+- Always use type hints; avoid `Any`
+- Use docstrings for public functions and classes
+- Keep functions under 20 lines
+- One class/router per file
+
+### Nomenclature
+- `PascalCase` for classes and Pydantic models
+- `snake_case` for functions, variables, modules
+- `SCREAMING_SNAKE_CASE` for constants and env vars
+- `kebab-case` for API endpoint URLs
+- Prefix booleans with verbs: `is_active`, `has_permission`
+- Start functions with verbs: `get_user`, `create_order`
+
+### Functions
+- Single responsibility; do one thing well
+- Use early returns to avoid nesting
+- Prefer comprehensions over loops for simple transforms
+- Use default parameters instead of `None` checks
+
+### Data
+- Prefer immutability where possible
+- Use `Enum` for fixed value sets
+- Validate at API boundary with Pydantic
+
+## FastAPI
+
+### Project Structure
+```
+src/
+  app/          # FastAPI instance, config, dependencies
+  api/v1/       # Routes and schemas by version
+  core/         # Security, exceptions, middleware
+  models/       # Database models
+  services/     # Business logic
+  repositories/ # Data access layer
+tests/
+```
+
+### API Design
+- Use versioning: `/api/v1/resource`
+- Use plural nouns: `/users`, `/orders`
+- Return proper HTTP status codes (200, 201, 400, 404, 422)
+- Use dependency injection for auth, db sessions
+- Implement pagination for list endpoints
+- Use `BackgroundTasks` for async operations
+
+### Exception Handling
+- Create custom exception classes
+- Use global exception handlers
+- Return consistent error format with detail and code
+
+## Pydantic
+
+### Schema Design
+- Separate schemas by purpose: `Create`, `Update`, `Response`
+- Use `Field()` for validation and documentation
+- Use validators for complex validation logic
+- Inherit shared config from base model
+
+### Best Practices
+- Use built-in types: `EmailStr`, `HttpUrl`, `UUID`
+- Define reusable annotated types
+- Use `Optional` only when `None` is valid
+- Use `Literal` for fixed string options
+
+## UV Package Manager
+- `uv init` to start projects
+- `uv add` for dependencies, `uv add --dev` for dev deps
+- `uv lock` to lock versions
+- `uv run` to execute in virtual environment
+- Keep `pyproject.toml` as single source of truth
+
+## Docker
+- Use multi-stage builds for smaller images
+- Copy `uv` from official image
+- Install deps with `uv sync --frozen --no-dev`
+- Don't run as root
+- Set `PYTHONDONTWRITEBYTECODE=1` and `PYTHONUNBUFFERED=1`
+- Use `.dockerignore` and health checks
+
+## Database
+- Use async drivers (`asyncpg`, `aiosqlite`)
+- Use repository pattern for data access
+- Use Alembic for migrations
+- Always use transactions for multi-step operations
+- Index frequently queried columns
+
+## Testing
+- Follow Arrange-Act-Assert pattern
+- Name tests descriptively: `test_<action>_<condition>_<result>`
+- Use fixtures for common setup
+- Use `httpx.AsyncClient` for API tests
+- Mock external services, not the database in integration tests
+
+## Security
+- Store secrets in environment variables
+- Use JWT for authentication
+- Hash passwords with bcrypt
+- Validate and sanitize all inputs
+- Configure CORS with explicit origins
+- Rate limit sensitive endpoints
