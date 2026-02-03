@@ -7,14 +7,16 @@ from pydantic import BaseModel
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
+# --- Imports for Feature Routers ---
 from app.documents.router import router as documents_router
+from app.chat.router import router as chat_router  # ✅ NEW: Import Chat Router
 
 # --- 1. Configuration & Setup ---
 
 # Load environment variables from the .env file
 load_dotenv()
 
-# Retrieve Supabase credentials (use service key for server-side operations)
+# Retrieve Supabase credentials
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 SUPABASE_KEY = (
     os.environ.get("SUPABASE_SERVICE_KEY") or 
@@ -33,7 +35,7 @@ if SUPABASE_URL and SUPABASE_KEY:
 else:
     print(f"WARNING: Supabase credentials not found. URL={bool(SUPABASE_URL)}, KEY={bool(SUPABASE_KEY)}")
 
-# Initialize FastAPI App (Keeping your original metadata)
+# Initialize FastAPI App
 app = FastAPI(
     title="StudyBudd API",
     description="Backend API for StudyBudd application",
@@ -42,8 +44,6 @@ app = FastAPI(
 
 # --- 2. Middleware (CORS) ---
 
-# CORS middleware
-# Note: allowing ["*"] is better for local dev to avoid issues with localhost vs 127.0.0.1
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -52,17 +52,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# --- 3. Register Routers ---
+
+# Existing documents router
 app.include_router(documents_router, prefix="/api")
 
-# --- 3. Data Models ---
+# ✅ NEW: Register Chat Router
+# The router itself has prefix="/chat", so mounting it at "/api" results in "/api/chat"
+app.include_router(chat_router, prefix="/api") 
+
+# --- 4. Data Models (Legacy/Auth) ---
 
 class UserCredentials(BaseModel):
     """Schema for user login and registration."""
     email: str
     password: str
 
-# --- 4. API Endpoints ---
+# --- 5. Global API Endpoints ---
 
 @app.get("/")
 async def root() -> dict[str, str]:
@@ -113,7 +119,7 @@ async def login(credentials: UserCredentials):
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-# --- 5. Local Execution ---
+# --- 6. Local Execution ---
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
