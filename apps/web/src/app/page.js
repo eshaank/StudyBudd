@@ -1,23 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-
 import HorizontalScroll from "./components/HorizontalScroll";
 import { createSupabaseServer } from "../lib/supabase/server";
 
 export default async function Home() {
-  // ✅ Server-side auth check (no flicker)
   const supabase = createSupabaseServer();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // ✅ If logged in, skip marketing and go to dashboard
-  if (user) {
-    redirect("/dashboard");
-  }
+  // ✅ If logged in, skip ads completely
+  if (user) redirect("/dashboard");
 
-  // Marketing content (logged out only)
   const line1 =
     "1. Improve your learning skills and Study alongside effective A.I. study mate.";
   const line2 =
@@ -50,7 +46,6 @@ export default async function Home() {
     },
   ];
 
-  // Helper for typing animation
   const typingStyle = (text, delay = "0s") => ({
     "--nch": `${text.length}ch`,
     "--steps": text.length,
@@ -61,7 +56,6 @@ export default async function Home() {
   return (
     <div className="font-sans min-h-screen bg-gradient-to-b from-white to-slate-100 text-slate-900 px-4 py-8 sm:px-6 md:px-8 lg:px-12 xl:px-20">
       <main className="flex flex-col items-center max-w-7xl mx-auto">
-        {/* Logo */}
         <div className="mb-8 md:mb-12">
           <Image
             className="w-32 h-auto sm:w-40 md:w-48 lg:w-[180px]"
@@ -74,7 +68,6 @@ export default async function Home() {
         </div>
 
         <div className="text-center space-y-6 sm:space-y-8 w-full">
-          {/* First typing text */}
           <div className="w-full flex justify-center px-2">
             <h1
               className="animate-typing overflow-hidden whitespace-normal sm:whitespace-nowrap border-r-2 sm:border-r-4 border-r-black pr-1 sm:pr-2 text-sm sm:text-base md:text-lg lg:text-[19px] font-medium leading-relaxed"
@@ -84,7 +77,6 @@ export default async function Home() {
             </h1>
           </div>
 
-          {/* Second typing text */}
           <div className="w-full flex justify-center px-2">
             <h2
               className="animate-typing overflow-hidden whitespace-normal sm:whitespace-nowrap border-r-2 sm:border-r-4 border-r-black pr-1 sm:pr-2 text-sm sm:text-base md:text-lg lg:text-[20px] font-medium leading-relaxed"
@@ -94,7 +86,6 @@ export default async function Home() {
             </h2>
           </div>
 
-          {/* Buttons */}
           <div className="flex justify-center gap-3 pt-4 sm:pt-6 md:pt-8">
             <Link
               href="/signup"
@@ -103,7 +94,6 @@ export default async function Home() {
               <span className="relative z-10">ENROLL NOW!!</span>
             </Link>
 
-            {/* ✅ For logged-out users, dashboard should route them to login anyway */}
             <Link
               href="/dashboard"
               className="click-btn btn-style501 px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 text-sm sm:text-base md:text-lg inline-flex items-center justify-center"
@@ -112,7 +102,6 @@ export default async function Home() {
             </Link>
           </div>
 
-          {/* Carousel */}
           <div className="mt-8 sm:mt-10 md:mt-12">
             <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 md:mb-8">
               Our AI-Powered Features

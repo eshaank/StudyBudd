@@ -15,14 +15,18 @@ export function createSupabaseServer() {
 
   return createServerClient(url, anon, {
     cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name, value, options) {
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        cookieStore.set({ name, value: "", ...options });
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set({ name, value, ...options });
+          });
+        } catch {
+          // In Server Components, cookie writes can be blocked.
+          // That's okay — middleware/route handlers can handle cookie writes instead.
+        }
       },
     },
   });

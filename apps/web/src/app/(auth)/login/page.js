@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
-
-console.log("SUPABASE URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+import { getMyProfile } from "../../../lib/profile";
 
 export default function LoginPage() {
   const router = useRouter();
+  const params = useSearchParams();
+  const checkEmail = params.get("checkEmail") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +21,7 @@ export default function LoginPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
 
-  // Step 8 (client): If already logged in, redirect away from login page
+  // If already logged in, go to dashboard
   useEffect(() => {
     let isMounted = true;
 
@@ -34,7 +35,7 @@ export default function LoginPage() {
         if (!isMounted) return;
 
         if (user) {
-          router.replace("/"); // or "/dashboard" later
+          router.replace("/dashboard");
           return;
         }
       } catch {
@@ -51,7 +52,6 @@ export default function LoginPage() {
     };
   }, [router]);
 
-  // Derived validation
   const emailErr = useMemo(() => {
     if (!touched.email) return "";
     if (!email.trim()) return "Email is required.";
@@ -68,7 +68,6 @@ export default function LoginPage() {
 
   const canSubmit = Boolean(email && password && !emailErr && !pwErr);
 
-  // Step 6A: Email/password login via Supabase
   async function onSubmit(e) {
     e.preventDefault();
     setTouched({ email: true, password: true });
@@ -87,7 +86,11 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      router.push("/"); // later: /dashboard
+      // ✅ Ensure profile row exists (handle + display_name)
+      await getMyProfile();
+
+      router.push("/dashboard");
+      router.refresh();
     } catch (err) {
       setError(err?.message || "Login failed. Please try again.");
     } finally {
@@ -95,7 +98,6 @@ export default function LoginPage() {
     }
   }
 
-  // Step 6B: Google OAuth via Supabase
   async function onGoogle() {
     setError("");
     setLoading(true);
@@ -110,8 +112,7 @@ export default function LoginPage() {
       });
 
       if (error) throw error;
-
-      // No router push here because OAuth redirects away automatically
+      // OAuth redirects away
     } catch (err) {
       setError(err?.message || "Google login failed. Try again.");
       setLoading(false);
@@ -130,16 +131,12 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100 flex items-center justify-center px-4 py-10">
-      {/* Decorative background blobs */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-blue-300/30 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl" />
 
-      {/* Content */}
       <div className="relative z-10 grid w-full max-w-5xl grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left: Login card */}
         <div className="rounded-2xl bg-white/90 backdrop-blur shadow-xl border border-slate-100 p-6 md:p-8">
-          {/* Brand */}
           <div className="mb-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-indigo-700">
               StudyBudd • Auth
@@ -149,10 +146,15 @@ export default function LoginPage() {
               Welcome back
             </h1>
             <p className="text-slate-600 mt-1">
-              Log in to continue to{" "}
-              <span className="font-semibold">StudyBudd</span>.
+              Log in to continue to <span className="font-semibold">StudyBudd</span>.
             </p>
           </div>
+
+          {checkEmail && (
+            <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+              Check your email to confirm your account, then log in here.
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -161,11 +163,8 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={onSubmit} className="space-y-4">
-            {/* Email */}
             <div>
-              <label className="text-sm font-medium text-slate-700">
-                Email
-              </label>
+              <label className="text-sm font-medium text-slate-700">Email</label>
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -173,8 +172,7 @@ export default function LoginPage() {
                 placeholder="you@school.edu"
                 autoComplete="email"
                 className={`mt-2 w-full rounded-xl border px-4 py-3 outline-none transition
-                  text-slate-900 placeholder:text-slate-400
-                  focus:ring-2
+                  text-slate-900 placeholder:text-slate-400 focus:ring-2
                   ${
                     emailErr
                       ? "border-red-300 focus:ring-red-200"
@@ -184,11 +182,8 @@ export default function LoginPage() {
               {emailErr && <p className="mt-2 text-sm text-red-600">{emailErr}</p>}
             </div>
 
-            {/* Password */}
             <div>
-              <label className="text-sm font-medium text-slate-700">
-                Password
-              </label>
+              <label className="text-sm font-medium text-slate-700">Password</label>
               <div className="mt-2 flex items-center gap-2">
                 <input
                   value={password}
@@ -198,8 +193,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   autoComplete="current-password"
                   className={`w-full rounded-xl border px-4 py-3 outline-none transition
-                    text-slate-900 placeholder:text-slate-400
-                    focus:ring-2
+                    text-slate-900 placeholder:text-slate-400 focus:ring-2
                     ${
                       pwErr
                         ? "border-red-300 focus:ring-red-200"
@@ -217,7 +211,6 @@ export default function LoginPage() {
               {pwErr && <p className="mt-2 text-sm text-red-600">{pwErr}</p>}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-between pt-1">
               <button
                 type="button"
@@ -237,7 +230,6 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Divider */}
             <div className="pt-2">
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200" />
@@ -269,7 +261,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Right: Visual panel */}
         <div className="hidden md:flex flex-col justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 p-8 text-white shadow-xl">
           <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             ✨ Study smarter
@@ -278,8 +269,7 @@ export default function LoginPage() {
           <h2 className="text-3xl font-bold mt-4">Your AI Study Companion</h2>
 
           <p className="text-indigo-100 mt-3">
-            Plan smarter. Learn faster. Track your progress with AI-powered tools
-            built for students.
+            Plan smarter. Learn faster. Track your progress with AI-powered tools built for students.
           </p>
 
           <ul className="mt-6 space-y-3 text-indigo-100">

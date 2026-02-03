@@ -1,18 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServer } from "../../../lib/supabase/server";
 
 export async function GET(request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
 
+  // After auth, Supabase redirects here with ?code=...
   if (code) {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
-
+    const supabase = createSupabaseServer();
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  return NextResponse.redirect(`${origin}/`);
+  // Send user where YOU want after login
+  return NextResponse.redirect(new URL("/dashboard", url.origin));
 }

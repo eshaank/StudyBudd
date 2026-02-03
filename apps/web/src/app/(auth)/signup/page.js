@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
+import { getMyProfile } from "../../../lib/profile";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function SignupPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
 
-  // Optional Step 8 (client): If already logged in, redirect away from signup
+  // If already logged in, go to dashboard (not home)
   useEffect(() => {
     let isMounted = true;
 
@@ -38,7 +39,7 @@ export default function SignupPage() {
         if (!isMounted) return;
 
         if (user) {
-          router.replace("/"); // or "/dashboard"
+          router.replace("/dashboard");
           return;
         }
       } catch {
@@ -55,7 +56,7 @@ export default function SignupPage() {
     };
   }, [router]);
 
-  // Derived validation
+  // Validation
   const emailErr = useMemo(() => {
     if (!touched.email) return "";
     if (!email.trim()) return "Email is required.";
@@ -87,7 +88,7 @@ export default function SignupPage() {
       password === confirmPw
   );
 
-  // Step 7: Email/password signup via Supabase
+  // Email/password signup
   async function onSubmit(e) {
     e.preventDefault();
     setTouched({ email: true, password: true, confirmPw: true });
@@ -106,14 +107,16 @@ export default function SignupPage() {
 
       if (error) throw error;
 
-      // Supabase may require email confirmation depending on your project settings.
-      // If email confirmation is ON, user may not be fully signed in yet.
-      // We'll redirect either way and show no error.
-      if (data?.user) {
-        router.push("/"); // or "/dashboard"
-      } else {
-        router.push("/"); // still redirect
+      // ✅ If email confirmation is OFF, session exists immediately
+      if (data?.session) {
+        await getMyProfile();
+        router.push("/dashboard");
+        router.refresh();
+        return;
       }
+
+      // ✅ If email confirmation is ON, user must confirm first → then login
+      router.push("/login?checkEmail=1");
     } catch (err) {
       setError(err?.message || "Signup failed. Please try again.");
     } finally {
@@ -121,7 +124,7 @@ export default function SignupPage() {
     }
   }
 
-  // Google signup/login (Supabase creates user automatically)
+  // Google signup/login
   async function onGoogle() {
     setError("");
     setLoading(true);
@@ -136,7 +139,7 @@ export default function SignupPage() {
       });
 
       if (error) throw error;
-      // No router push — OAuth redirects automatically
+      // OAuth redirects automatically
     } catch (err) {
       setError(err?.message || "Google signup failed. Try again.");
       setLoading(false);
@@ -155,16 +158,12 @@ export default function SignupPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100 flex items-center justify-center px-4 py-10">
-      {/* Decorative background blobs */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-blue-300/30 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl" />
 
-      {/* Content */}
       <div className="relative z-10 grid w-full max-w-5xl grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left: Signup card */}
         <div className="rounded-2xl bg-white/90 backdrop-blur shadow-xl border border-slate-100 p-6 md:p-8">
-          {/* Brand */}
           <div className="mb-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-indigo-700">
               StudyBudd • Auth
@@ -174,8 +173,7 @@ export default function SignupPage() {
               Create your account
             </h1>
             <p className="text-slate-600 mt-1">
-              Sign up to start using{" "}
-              <span className="font-semibold">StudyBudd</span>.
+              Sign up to start using <span className="font-semibold">StudyBudd</span>.
             </p>
           </div>
 
@@ -186,7 +184,6 @@ export default function SignupPage() {
           )}
 
           <form onSubmit={onSubmit} className="space-y-4">
-            {/* Email */}
             <div>
               <label className="text-sm font-medium text-slate-700">Email</label>
               <input
@@ -196,8 +193,7 @@ export default function SignupPage() {
                 placeholder="you@school.edu"
                 autoComplete="email"
                 className={`mt-2 w-full rounded-xl border px-4 py-3 outline-none transition
-                  text-slate-900 placeholder:text-slate-400
-                  focus:ring-2
+                  text-slate-900 placeholder:text-slate-400 focus:ring-2
                   ${
                     emailErr
                       ? "border-red-300 focus:ring-red-200"
@@ -207,11 +203,8 @@ export default function SignupPage() {
               {emailErr && <p className="mt-2 text-sm text-red-600">{emailErr}</p>}
             </div>
 
-            {/* Password */}
             <div>
-              <label className="text-sm font-medium text-slate-700">
-                Password
-              </label>
+              <label className="text-sm font-medium text-slate-700">Password</label>
               <div className="mt-2 flex items-center gap-2">
                 <input
                   value={password}
@@ -221,8 +214,7 @@ export default function SignupPage() {
                   placeholder="••••••••"
                   autoComplete="new-password"
                   className={`w-full rounded-xl border px-4 py-3 outline-none transition
-                    text-slate-900 placeholder:text-slate-400
-                    focus:ring-2
+                    text-slate-900 placeholder:text-slate-400 focus:ring-2
                     ${
                       pwErr
                         ? "border-red-300 focus:ring-red-200"
@@ -240,7 +232,6 @@ export default function SignupPage() {
               {pwErr && <p className="mt-2 text-sm text-red-600">{pwErr}</p>}
             </div>
 
-            {/* Confirm Password */}
             <div>
               <label className="text-sm font-medium text-slate-700">
                 Confirm password
@@ -254,8 +245,7 @@ export default function SignupPage() {
                   placeholder="••••••••"
                   autoComplete="new-password"
                   className={`w-full rounded-xl border px-4 py-3 outline-none transition
-                    text-slate-900 placeholder:text-slate-400
-                    focus:ring-2
+                    text-slate-900 placeholder:text-slate-400 focus:ring-2
                     ${
                       confirmErr
                         ? "border-red-300 focus:ring-red-200"
@@ -270,10 +260,11 @@ export default function SignupPage() {
                   {showConfirmPw ? "Hide" : "Show"}
                 </button>
               </div>
-              {confirmErr && <p className="mt-2 text-sm text-red-600">{confirmErr}</p>}
+              {confirmErr && (
+                <p className="mt-2 text-sm text-red-600">{confirmErr}</p>
+              )}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-end pt-1">
               <button
                 disabled={!canSubmit || loading}
@@ -285,7 +276,6 @@ export default function SignupPage() {
               </button>
             </div>
 
-            {/* Divider */}
             <div className="pt-2">
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200" />
@@ -317,7 +307,6 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {/* Right: Visual panel */}
         <div className="hidden md:flex flex-col justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 p-8 text-white shadow-xl">
           <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             🚀 Get started
