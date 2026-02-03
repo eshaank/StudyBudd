@@ -19,6 +19,20 @@ study-budd/
 ├── apps/
 │   ├── web/                    # Next.js frontend
 │   │   ├── src/
+│   │   │   ├── app/
+│   │   │   │   ├── (auth)/     # Login / Signup routes
+│   │   │   │   ├── auth/
+│   │   │   │   │   └── callback/route.js
+│   │   │   │   ├── user/
+│   │   │   │   │   └── [handle]/page.jsx   # User dashboards
+│   │   │   │   ├── dashboard/  # Redirect-only route
+│   │   │   │   ├── layout.js
+│   │   │   │   └── page.js     # Landing / marketing page
+│   │   │   ├── lib/
+│   │   │   │   └── supabase/
+│   │   │   │       ├── client.js
+│   │   │   │       └── server.js
+│   │   │   └── components/
 │   │   ├── public/
 │   │   ├── package.json
 │   │   └── Dockerfile
@@ -35,7 +49,6 @@ study-budd/
 │       ├── pyproject.toml
 │       └── Dockerfile
 │
-├── packages/                   # Shared code (optional)
 ├── docker/
 │   └── postgres/
 │       └── init.sql
@@ -44,6 +57,7 @@ study-budd/
 ├── docker-compose.dev.yml
 ├── Makefile
 └── README.md
+
 ```
 
 ## Getting Started
