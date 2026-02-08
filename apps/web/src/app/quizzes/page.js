@@ -1,155 +1,246 @@
-"use client"
-import React from 'react';
-import {useState} from 'react';
-// import { useCallback } from "react";
-import { useDropzone } from "react-dropzone";
+"use client";
 
-function Basic(props) {
-    const [files, setFiles] = useState([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const {fileRejections, getRootProps, getInputProps} = useDropzone({maxFiles: 4, onDrop: (acceptedFiles) => {
-        // Add new files to existing ones (up to max of 4)
-        setFiles(prev => {
-            const combined = [...prev, ...acceptedFiles];
-            return combined.slice(0, 4); // Keep only first 4
-        });
+import React, { useEffect, useMemo, useState } from "react";
+import QUIZ from "../data/dsaQuiz.json";
+
+
+// IMPORTANT: adjust this import if your folder structure is different
+import { usePomodoro } from "../components/PomodoroProvider";
+
+export default function QuizzesPage() {
+  // Quiz UI state
+  const [view, setView] = useState("quiz"); // "quiz" | "results"
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState({}); // { [questionId]: optionIndex }
+
+  const q = useMemo(() => QUIZ.questions[currentIndex], [currentIndex]);
+  const pickedForCurrent = answers[q?.id];
+
+  const isFirst = currentIndex === 0;
+  const isLast = currentIndex === QUIZ.questions.length - 1;
+
+  const score = useMemo(() => {
+    let s = 0;
+    for (const question of QUIZ.questions) {
+      const picked = answers[question.id];
+      if (picked === question.correctIndex) s += 1;
     }
-    });
+    return s;
+  }, [answers]);
 
-    const removeFile = (fileToRemove) => {
-        setFiles(files.filter(file => file !== fileToRemove));
-    };
+  // ✅ Pomodoro integration (existing)
+  const {
+    mm,
+    ss,
+    isRunning,
+    mode,
+    modeLabel,
+    cycleCount,
+    setStudyMinutes,
+    switchMode,
+    start,
+    pause,
+    resetTimer
+  } = usePomodoro();
 
-    const clearAll = () => {
-        setFiles([]);
+  // Track this quiz's focus completion
+  const [quizActive, setQuizActive] = useState(false);
+  const [cycleBaseline, setCycleBaseline] = useState(null);
+
+  const startQuizPomodoro = () => {
+    switchMode("focus");
+    setStudyMinutes(25);
+    resetTimer();
+    start();
+
+    setQuizActive(true);
+    setCycleBaseline(cycleCount);
+  };
+
+  // Auto-finish when a focus session completes
+  useEffect(() => {
+    if (!quizActive) return;
+    if (cycleBaseline == null) return;
+
+    if (cycleCount > cycleBaseline) {
+      setQuizActive(false);
+      setView("results");
+      pause();
     }
+  }, [quizActive, cycleBaseline, cycleCount, pause]);
 
-     // Handle form submission
-     const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        if (files.length === 0) {
-            alert("Please select at least one file");
-            return;
-        }
+  const selectAnswer = (optionIndex) => {
+    setAnswers((prev) => ({ ...prev, [q.id]: optionIndex }));
+  };
 
-        setIsSubmitting(true);
+  const resetQuiz = () => {
+    setView("quiz");
+    setCurrentIndex(0);
+    setAnswers({});
+    setQuizActive(false);
+    setCycleBaseline(null);
+    pause();
+    resetTimer();
+  };
 
-        // Create FormData and append files
-        const formData = new FormData();
-        files.forEach((file, index) => {
-            formData.append(`file-${index}`, file);
-        });
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 text-gray-900">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-10 sm:mb-14">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-4">
+            Quizzes
+          </h1>
+          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+            DSA quiz powered by JSON + your existing Pomodoro focus session.
+          </p>
+        </div>
 
-        // Log file names (for demonstration)
-        console.log("Submitting files:");
-        files.forEach(file => console.log(file.name));
-        
-        // Here you would typically send the formData to your server
-        // Example: await fetch('/api/upload', { method: 'POST', body: formData });
-        
-        alert(`Submitting ${files.length} file(s):\n${files.map(f => f.name).join('\n')}`);
-        
-        // Clear files after successful submission
-        setFiles([]);
-        setIsSubmitting(false);
-    }
+        {view === "quiz" && q && (
+          <section className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold">{QUIZ.title}</h2>
+                <p className="text-gray-600">
+                  Question {currentIndex + 1} / {QUIZ.questions.length}
+                </p>
+              </div>
 
-    const filesList = files.map(file => (
-        <li key = {file.path} className="flex justify-between items-center">
-            <span>{file.path} - {file.size} bytes </span>
-            <button 
-                onClick={() => removeFile(file)}
-                className="ml-2 text-red-500 hover:text-red-700"
-            >
-                Remove
-            </button>
-        </li>
-    ));
-
-    const fileRejectedItems = fileRejections.map(({file, errors }) => {
-        return(
-            <li key = {file.path}>
-                {file.path} - {file.size} bytes
-                <ul>
-                    {errors.map(e => <li key={e.code}>{e.message}</li>)}
-                </ul>
-            </li>
-
-        )
-    });
-
-    return (
-        <main className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 text-gray 900">
-            <div main="max-w-7xl mx-auto">
-                {/* Header part where I will add key phrases of what our App does */}
-                <div className="text-center mb-12 sm:mb-16">
-                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-4">
-                        Ask your A.I. budd Mark
-                    </h1>
-                    <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
-                        Mark helps you cover and make notes for your classes and quiz
-                    </p>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">{modeLabel}</div>
+                <div className="text-2xl font-bold tabular-nums">
+                  {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <section className="container max-w-2xl mx-auto">
-                        <div {...getRootProps({
-                            className: `border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                                files.length >= 4 
-                                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
-                                    : 'border-gray-300 hover:border-gray-400'
-                            }`
-                        })}>
-                            <input {...getInputProps()} disabled={files.length >= 4}/>
-                            <p className='text-blue-700 font-semibold'>Drag and Drop your files here, or you can click and select the files</p>
-                            <em className='text-blue-700'>(Max 4 files are allowed - Currently: {files.length}/4)</em>
-                        </div>
-                        
-                        {files.length > 0 && (
-                            <aside className="mt-4">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-gray-600 font-semibold">Files Accepted ({files.length}/4)</h4>
-                                    <button 
-                                        type="button"  // Important: prevent form submission
-                                        onClick={clearAll}
-                                        className="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                                    >
-                                        Clear All
-                                    </button>
-                                </div>
-                                <ul className="text-green-600 space-y-1">{filesList}</ul>
-                            </aside>
-                        )}
-                        
-                        {fileRejectedItems.length > 0 && (
-                            <aside className="mt-4">
-                                <h4 className="font-semibold text-red-600">Files Rejected</h4>
-                                <ul>{fileRejectedItems}</ul>
-                            </aside>
-                        )}
+                <div className="flex gap-2 mt-2 justify-end">
+                  <button
+                    type="button"
+                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:opacity-60"
+                    onClick={startQuizPomodoro}
+                    disabled={isRunning && mode === "focus"}
+                  >
+                    Start Quiz (25m)
+                  </button>
 
-                        {/* Submit button */}
-                        <div className="mt-6 text-center">
-                            <button 
-                                type="submit"
-                                disabled={files.length === 0 || isSubmitting}
-                                className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-                                    files.length === 0 || isSubmitting
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                                }`}
-                            >
-                                {isSubmitting ? 'Submitting...' : `Submit ${files.length} File(s)`}
-                            </button>
-                        </div>
-                    </section>
-                </form>
+                  <button
+                    type="button"
+                    className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+                    onClick={pause}
+                  >
+                    Pause
+                  </button>
+                </div>
+
+                <div className="text-xs text-gray-500 mt-2">
+                  Auto-finishes when focus ends.
+                </div>
+              </div>
             </div>
-            <h2 className="text-2xl p-4">This is our quizzes page and we will add more stuffs and features for quizzes</h2>
-        </main>
-    );
+
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-3">{q.prompt}</h3>
+
+              <div className="space-y-2">
+                {q.options.map((opt, i) => {
+                  const isPicked = pickedForCurrent === i;
+                  const showCorrectness = pickedForCurrent !== undefined;
+                  const isCorrect = i === q.correctIndex;
+
+                  let extraStyle = "";
+                  if (showCorrectness && isCorrect)
+                    extraStyle = "border-green-500 bg-green-50";
+                  if (showCorrectness && isPicked && !isCorrect)
+                    extraStyle = "border-red-500 bg-red-50";
+                  if (!showCorrectness && isPicked)
+                    extraStyle = "border-blue-500 bg-blue-50";
+
+                  return (
+                    <button
+                      key={`${q.id}-${i}`}
+                      type="button"
+                      onClick={() => selectAnswer(i)}
+                      className={`w-full text-left px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 ${extraStyle}`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <button
+                type="button"
+                disabled={isFirst}
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                onClick={() => setCurrentIndex((x) => x - 1)}
+              >
+                Back
+              </button>
+
+              {!isLast ? (
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                  onClick={() => setCurrentIndex((x) => x + 1)}
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                  onClick={() => setView("results")}
+                >
+                  Finish Now
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {view === "results" && (
+          <section className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow">
+            <h2 className="text-2xl font-bold mb-2">Results</h2>
+            <p className="text-gray-700 mb-4">
+              You scored <span className="font-semibold">{score}</span> /{" "}
+              {QUIZ.questions.length}
+            </p>
+
+            <div className="space-y-3">
+              {QUIZ.questions.map((question) => {
+                const picked = answers[question.id];
+                const correct = question.correctIndex;
+                const ok = picked === correct;
+
+                return (
+                  <div key={question.id} className="border rounded p-3">
+                    <div className="font-semibold">{question.prompt}</div>
+                    <div className={`mt-1 ${ok ? "text-green-700" : "text-red-700"}`}>
+                      Your answer:{" "}
+                      {picked === undefined ? "No answer" : question.options[picked]}
+                    </div>
+                    {!ok && (
+                      <div className="text-green-700">
+                        Correct answer: {question.options[correct]}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={resetQuiz}
+              >
+                Retry Quiz (New Focus)
+              </button>
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
+  );
 }
-
-export default Basic;
-

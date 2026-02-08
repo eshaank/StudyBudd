@@ -1,0 +1,65 @@
+{
+  "title": "DSA Quick Quiz",
+  "questions": [
+    {
+      "id": "q1",
+      "prompt": "What is the time complexity of binary search on a sorted array?",
+      "options": ["O(n)", "O(log n)", "O(n log n)", "O(1)"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q2",
+      "prompt": "Which data structure uses FIFO (First In, First Out)?",
+      "options": ["Stack", "Queue", "Tree", "Graph"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q3",
+      "prompt": "Which traversal of a BST gives sorted order (ascending)?",
+      "options": ["Preorder", "Inorder", "Postorder", "Level-order"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q4",
+      "prompt": "What is the worst-case time complexity of quicksort?",
+      "options": ["O(n)", "O(n log n)", "O(log n)", "O(n^2)"],
+      "correctIndex": 3
+    },
+    {
+      "id": "q5",
+      "prompt": "Which of these is typically used for BFS (Breadth-First Search)?",
+      "options": ["Stack", "Queue", "Heap", "HashMap"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q6",
+      "prompt": "A hash table collision is most commonly handled by:",
+      "options": ["Binary search", "Chaining or probing", "Recursion", "Sorting"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q7",
+      "prompt": "In a min-heap, the smallest element is always at:",
+      "options": ["A leaf node", "The root", "The rightmost node", "Any random node"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q8",
+      "prompt": "What is the time complexity of inserting into an AVL tree?",
+      "options": ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q9",
+      "prompt": "Which algorithm is used to find shortest paths in a weighted graph with non-negative weights?",
+      "options": ["DFS", "Dijkstra’s", "Kruskal’s", "Merge sort"],
+      "correctIndex": 1
+    },
+    {
+      "id": "q10",
+      "prompt": "In Big-O, which grows fastest as n increases?",
+      "options": ["O(log n)", "O(n)", "O(n log n)", "O(2^n)"],
+      "correctIndex": 3
+    }
+  ]
+}
