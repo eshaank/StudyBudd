@@ -100,6 +100,24 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = ""
     supabase_storage_bucket: str = "documents"
 
+    # Together AI
+    together_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("TOGETHER_API_KEY", "together_api_key")
+    )
+    together_model: str = Field(
+        default="meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        validation_alias=AliasChoices("TOGETHER_MODEL", "together_model")
+    )
+    together_max_tokens: int = Field(
+        default=1024,
+        validation_alias=AliasChoices("TOGETHER_MAX_TOKENS", "together_max_tokens")
+    )
+    together_temperature: float = Field(
+        default=0.7,
+        validation_alias=AliasChoices("TOGETHER_TEMPERATURE", "together_temperature")
+    )
+
     # Upload limits
     max_upload_size_mb: int = 10
 
