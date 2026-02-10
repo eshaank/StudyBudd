@@ -18,72 +18,118 @@ export default function AccountPage() {
 
   useEffect(() => {
     const supabase = createSupabaseBrowser();
+    let cancelled = false;
 
     async function load() {
       setLoading(true);
       setNotice("");
 
       const { data, error } = await supabase.auth.getUser();
-      if (error) console.error(error);
+      if (error) console.error("auth.getUser error:", error);
 
       const u = data?.user ?? null;
+      if (cancelled) return;
+
       setUser(u);
 
       if (!u) {
-        // not logged in
         router.push("/auth");
         return;
       }
 
-      // Load profile
+      // ✅ don't throw on missing row
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("id", u.id)
-        .single();
+        .maybeSingle();
 
       if (profErr) {
         // If profile row doesn't exist yet, that's okay; we'll create on save
-        console.warn("Profile load warning:", profErr.message);
+        console.warn("Profile load warning:", profErr);
       }
 
-      setFullName(profile?.full_name ?? "");
-      setLoading(false);
+      if (!cancelled) {
+        setFullName(profile?.full_name ?? "");
+        setLoading(false);
+      }
     }
 
     load();
 
-    // keep in sync if auth changes
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (!session?.user) router.push("/auth");
     });
 
-    return () => sub?.subscription?.unsubscribe();
+    return () => {
+      cancelled = true;
+      sub?.subscription?.unsubscribe();
+    };
   }, [router]);
 
+  function formatSupabaseError(e) {
+    // Supabase PostgrestError usually has these fields
+    if (e && typeof e === "object") {
+      const msg = e.message || e.error_description || e.error || "";
+      const details = e.details || "";
+      const hint = e.hint || "";
+      const code = e.code || "";
+      const status = e.status || "";
+
+      const compact = [msg, details, hint, code && `code:${code}`, status && `status:${status}`]
+        .filter(Boolean)
+        .join(" | ");
+
+      if (compact) return compact;
+      // fallback: show something instead of {}
+      try {
+        return JSON.stringify(e);
+      } catch {
+        return String(e);
+      }
+    }
+    return String(e);
+  }
+
   async function saveChanges() {
-    if (!user) return;
+    if (!user || saving) return;
 
     const supabase = createSupabaseBrowser();
     setSaving(true);
     setNotice("");
 
     try {
-      const { error } = await supabase.from("profiles").upsert({
+      const payload = {
         id: user.id,
         full_name: fullName,
         updated_at: new Date().toISOString(),
-      });
+      };
+
+      // ✅ deterministic upsert + return updated row
+      const { data, error } = await supabase
+        .from("profiles")
+        .upsert(payload, { onConflict: "id" })
+        .select("id, full_name, updated_at")
+        .single();
 
       if (error) throw error;
 
+      setFullName(data?.full_name ?? "");
       setNotice("Saved ✅");
     } catch (e) {
-      console.error(e);
-      setNotice("Save failed. Check console.");
+      const msg = formatSupabaseError(e);
+      console.error("saveChanges error:", e);
+
+      // Helpful hint for the most common issue
+      if (msg.toLowerCase().includes("row level security") || msg.toLowerCase().includes("rls")) {
+        setNotice("Save failed: RLS policy blocking update/insert.");
+      } else {
+        setNotice("Save failed: " + msg);
+      }
     } finally {
       setSaving(false);
-      setTimeout(() => setNotice(""), 2500);
+      setTimeout(() => setNotice(""), 3000);
     }
   }
 
@@ -97,17 +143,12 @@ export default function AccountPage() {
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-white">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         <div className="mb-6">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Account
-          </h1>
-          <p className="text-white/70 mt-1">
-            Manage your profile and account settings.
-          </p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Account</h1>
+          <p className="text-white/70 mt-1">Manage your profile and account settings.</p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)] p-6 sm:p-8">
           <div className="grid gap-6 sm:grid-cols-[220px_1fr] items-start">
-            {/* ✅ REAL AVATAR UPLOADER */}
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
               <AvatarUploader />
               <p className="mt-3 text-xs text-white/50">
@@ -115,26 +156,24 @@ export default function AccountPage() {
               </p>
             </div>
 
-            {/* Profile form */}
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-semibold text-white/80">
-                  Full name
-                </label>
+                <label className="text-sm font-semibold text-white/80">Full name</label>
                 <input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={loading}
                   className="mt-2 w-full rounded-xl bg-slate-950/40 border border-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60"
-                  placeholder="Pratik Gurung"
+                  placeholder="Enter your name"
                 />
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={saveChanges}
-                  disabled={loading || saving}
+                  disabled={loading || saving || !user}
                   className="rounded-xl bg-indigo-500 px-5 py-3 font-semibold hover:bg-indigo-600 transition disabled:opacity-60"
+                  type="button"
                 >
                   {saving ? "Saving..." : "Save changes"}
                 </button>
@@ -142,23 +181,19 @@ export default function AccountPage() {
                 <button
                   onClick={signOut}
                   className="rounded-xl bg-white/10 px-5 py-3 font-semibold hover:bg-white/15 transition"
+                  type="button"
                 >
                   Sign out
                 </button>
 
-                {notice ? (
-                  <span className="text-sm text-white/80">{notice}</span>
-                ) : null}
+                {notice ? <span className="text-sm text-white/80">{notice}</span> : null}
               </div>
 
-              <p className="text-xs text-white/50">
-                Profile data in Supabase (profiles table).
-              </p>
+              <p className="text-xs text-white/50">Profile data in Supabase (profiles table).</p>
             </div>
           </div>
         </div>
 
-        {/* ✅ GitHub-style productivity section */}
         <div className="mt-6">
           <ProductivityHeatmap />
         </div>

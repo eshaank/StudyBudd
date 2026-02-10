@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { PomodoroProvider } from "../components/PomodoroProvider";
-import PomodorTimer from "../components/PomodorTimer"; 
 import PomodoroSidebarCard from "../components/PomodoroSidebarCard";
-
 
 const NAV = [
   { href: "/dashboard/files", label: "Files", desc: "Your study library", icon: "📁" },
@@ -27,19 +25,20 @@ export default function DashboardLayout({ children }) {
   const [open, setOpen] = useState(false);
   const title = useMemo(() => getTitle(pathname), [pathname]);
 
-  // ✅ hydration guard (localStorage store can mismatch SSR)
+  // hydration guard (localStorage/store can mismatch SSR)
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   return (
     <PomodoroProvider>
-      <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100">
+      <div className="min-h-screen relative bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100">
         {/* Decorative blobs */}
         <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl" />
         <div className="pointer-events-none absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-blue-300/30 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl" />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
+        {/* ✅ FULL-WIDTH WRAPPER */}
+        <div className="relative z-10 w-full max-w-none px-4 sm:px-6 lg:px-10 xl:px-14 py-6">
           {/* Topbar */}
           <div className="mb-6 rounded-2xl bg-white/75 backdrop-blur shadow-xl border border-slate-100 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
@@ -78,15 +77,14 @@ export default function DashboardLayout({ children }) {
             </div>
           </div>
 
-          {/* ✅ Keep your original 2-column layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-[280px_1fr] gap-6">
+          {/* ✅ Wider layout on big screens */}
+          <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6 w-full min-w-0">
             {/* Sidebar */}
             <aside
               className={`${
                 open ? "block" : "hidden"
-              } sm:block rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 h-fit`}
+              } lg:block rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 h-fit`}
             >
-              {/* ✅ make sidebar content sticky near top */}
               <div className="sticky top-6 space-y-4">
                 <div>
                   <p className="text-xs font-semibold text-slate-500">NAVIGATION</p>
@@ -125,22 +123,20 @@ export default function DashboardLayout({ children }) {
                   })}
                 </nav>
 
-                {/*  Pomodoro directly under navigation */}
+                {/* Pomodoro */}
                 <div className="rounded-2xl border border-slate-100 bg-white/70 p-3 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm font-extrabold text-slate-900">Pomodoro</div>
                     <div className="text-xs font-semibold text-slate-500">Focus</div>
                   </div>
-
-                  {/* hydration guard so no SSR/client mismatch */}
                   {mounted ? <PomodoroSidebarCard /> : null}
                 </div>
               </div>
             </aside>
 
-            {/* Main content (UNCHANGED) */}
-            <section className="rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 sm:p-6">
-              {children}
+            {/* Main content */}
+            <section className="min-w-0 rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 sm:p-6">
+              <div className="w-full max-w-none">{children}</div>
             </section>
           </div>
         </div>

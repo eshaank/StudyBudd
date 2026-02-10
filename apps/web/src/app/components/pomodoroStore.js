@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { logFocusCompletion } from "../../lib/pomodoro/logFocusCompletion"; //  correct path from /components
+import { logFocusCompletion } from "../../lib/pomodoro/logFocusCompletion";
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -15,8 +15,7 @@ function totalSecondsForMode(mode, studyM, shortM, longM) {
 
 const STORAGE_KEY = "studybudd_pomodoro_v1";
 
-function loadInitial() {
-  if (typeof window === "undefined") return null;
+function safeLoad() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -25,52 +24,82 @@ function loadInitial() {
   }
 }
 
-function saveState(state) {
+function safeSave(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {}
 }
 
 export function usePomodoroStore() {
-  const persisted = loadInitial();
+  // ✅ IMPORTANT: do NOT read localStorage during render (SSR hydration mismatch)
+  const [hydrated, setHydrated] = useState(false);
 
-  const [studyMinutes, setStudyMinutes] = useState(persisted?.studyMinutes ?? 25);
-  const [shortBreakMinutes, setShortBreakMinutes] = useState(
-    persisted?.shortBreakMinutes ?? 5
+  // Defaults (SSR-safe)
+  const [studyMinutes, setStudyMinutes] = useState(25);
+  const [shortBreakMinutes, setShortBreakMinutes] = useState(5);
+  const [longBreakMinutes, setLongBreakMinutes] = useState(15);
+  const [longBreakEvery, setLongBreakEvery] = useState(4);
+
+  const [mode, setMode] = useState("focus");
+  const [isRunning, setIsRunning] = useState(false);
+  const [cycleCount, setCycleCount] = useState(0);
+
+  const [secondsLeft, setSecondsLeft] = useState(() =>
+    totalSecondsForMode("focus", 25, 5, 15)
   );
-  const [longBreakMinutes, setLongBreakMinutes] = useState(
-    persisted?.longBreakMinutes ?? 15
-  );
-  const [longBreakEvery, setLongBreakEvery] = useState(persisted?.longBreakEvery ?? 4);
 
-  const [mode, setMode] = useState(persisted?.mode ?? "focus");
-  const [isRunning, setIsRunning] = useState(persisted?.isRunning ?? false);
-  const [cycleCount, setCycleCount] = useState(persisted?.cycleCount ?? 0);
+  const targetEndMsRef = useRef(null);
 
-  const [secondsLeft, setSecondsLeft] = useState(() => {
-    const now = Date.now();
-    const targetEnd = persisted?.targetEndMs ?? null;
-
-    if (persisted?.isRunning && targetEnd) {
-      return Math.max(0, Math.floor((targetEnd - now) / 1000));
+  // ✅ Hydrate from localStorage after mount
+  useEffect(() => {
+    const persisted = safeLoad();
+    if (!persisted) {
+      setHydrated(true);
+      return;
     }
 
-    if (typeof persisted?.secondsLeft === "number") return persisted.secondsLeft;
+    const nextStudy = persisted.studyMinutes ?? 25;
+    const nextShort = persisted.shortBreakMinutes ?? 5;
+    const nextLong = persisted.longBreakMinutes ?? 15;
+    const nextEvery = persisted.longBreakEvery ?? 4;
 
-    // use persisted defaults to avoid relying on runtime state here
-    const initMode = persisted?.mode ?? "focus";
-    const initStudy = persisted?.studyMinutes ?? 25;
-    const initShort = persisted?.shortBreakMinutes ?? 5;
-    const initLong = persisted?.longBreakMinutes ?? 15;
+    const nextMode = persisted.mode ?? "focus";
+    const nextRunning = persisted.isRunning ?? false;
+    const nextCycle = persisted.cycleCount ?? 0;
 
-    return totalSecondsForMode(initMode, initStudy, initShort, initLong);
-  });
+    setStudyMinutes(nextStudy);
+    setShortBreakMinutes(nextShort);
+    setLongBreakMinutes(nextLong);
+    setLongBreakEvery(nextEvery);
 
-  const targetEndMsRef = useRef(persisted?.targetEndMs ?? null);
+    setMode(nextMode);
+    setIsRunning(nextRunning);
+    setCycleCount(nextCycle);
 
-  // Persist
+    // restore timer
+    const now = Date.now();
+    const targetEnd = persisted.targetEndMs ?? null;
+
+    if (nextRunning && targetEnd) {
+      const remaining = Math.max(0, Math.floor((targetEnd - now) / 1000));
+      setSecondsLeft(remaining);
+      targetEndMsRef.current = targetEnd;
+    } else if (typeof persisted.secondsLeft === "number") {
+      setSecondsLeft(persisted.secondsLeft);
+      targetEndMsRef.current = null;
+    } else {
+      setSecondsLeft(totalSecondsForMode(nextMode, nextStudy, nextShort, nextLong));
+      targetEndMsRef.current = null;
+    }
+
+    setHydrated(true);
+  }, []);
+
+  // Persist (after hydration so we don’t overwrite storage with defaults)
   useEffect(() => {
-    saveState({
+    if (!hydrated) return;
+
+    safeSave({
       studyMinutes,
       shortBreakMinutes,
       longBreakMinutes,
@@ -82,6 +111,7 @@ export function usePomodoroStore() {
       targetEndMs: targetEndMsRef.current,
     });
   }, [
+    hydrated,
     studyMinutes,
     shortBreakMinutes,
     longBreakMinutes,
@@ -118,7 +148,7 @@ export function usePomodoroStore() {
 
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning]); // intentionally only isRunning
+  }, [isRunning]);
 
   // Auto advance when hit 0
   useEffect(() => {
@@ -128,7 +158,6 @@ export function usePomodoroStore() {
     targetEndMsRef.current = null;
 
     if (mode === "focus") {
-      // ✅ LOG HERE (only when a focus session actually finishes)
       logFocusCompletion({ minutes: studyMinutes }).catch(() => {});
 
       const nextCycle = cycleCount + 1;
@@ -168,7 +197,7 @@ export function usePomodoroStore() {
     if (secondsLeft === 0) setSecondsLeft(fresh);
 
     setIsRunning(true);
-    targetEndMsRef.current = Date.now() + fresh * 1000; // ✅ use fresh, not stale secondsLeft
+    targetEndMsRef.current = Date.now() + fresh * 1000;
   }
 
   function pause() {
@@ -213,6 +242,8 @@ export function usePomodoroStore() {
   })();
 
   return {
+    hydrated,
+
     studyMinutes,
     shortBreakMinutes,
     longBreakMinutes,

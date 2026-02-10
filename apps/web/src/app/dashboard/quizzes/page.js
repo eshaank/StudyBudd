@@ -89,9 +89,6 @@ export default function QuizzesPage() {
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-4">
             Quizzes
           </h1>
-          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
-            DSA quiz powered by JSON + your existing Pomodoro focus session.
-          </p>
         </div>
 
         {view === "quiz" && q && (

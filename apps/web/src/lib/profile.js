@@ -34,14 +34,23 @@ export async function getMyProfile() {
 
 export async function updateMyProfile({ full_name, avatar_url }) {
   const supabase = createSupabaseBrowser();
-  const { data: authData } = await supabase.auth.getUser();
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr) throw authErr;
+
   const user = authData.user;
   if (!user) throw new Error("Not logged in");
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
-    .update({ full_name, avatar_url })
-    .eq("id", user.id);
+    .update({ full_name, avatar_url, updated_at: new Date().toISOString() })
+    .eq("id", user.id)
+    .select("id, full_name, avatar_url, updated_at")
+    .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("updateMyProfile error:", error);
+    throw error;
+  }
+
+  return data;
 }
