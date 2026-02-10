@@ -14,7 +14,7 @@ help: ## Show this help message
 # =============================================================================
 
 dev: ## Start all services in development mode with hot reload
-	docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 build: ## Build all Docker images
 	docker compose build
@@ -29,7 +29,7 @@ stop: ## Alias for down
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml down
 
 logs: ## Follow logs from all services
-	docker compose logs -f
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
 
 clean: ## Stop services and remove volumes
 	docker compose down -v
@@ -44,11 +44,8 @@ web-dev: ## Run frontend dev server locally (without Docker)
 api-dev: ## Run API dev server locally (without Docker)
 	cd apps/api && uv run uvicorn app.main:app --reload
 
-db-up: ## Start only the database service
-	docker compose up -d db
-
 # =============================================================================
-# Database
+# Database (Supabase - migrations run against Supabase Postgres)
 # =============================================================================
 
 db-migrate: ## Run database migrations

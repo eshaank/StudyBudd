@@ -1,10 +1,9 @@
 # Development overrides - use with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Requires .env in project root with Supabase credentials (DATABASE_URL, SUPABASE_*, etc.)
 
 services:
   web:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
       target: deps  # Use deps stage which has node_modules installed
     working_dir: /app
     volumes:
@@ -12,24 +11,16 @@ services:
       - web_node_modules:/app/node_modules  # Named volume to preserve node_modules
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     command: npm run dev
 
   api:
-    build:
-      context: ./apps/api
-      dockerfile: Dockerfile
     volumes:
       - ./apps/api/app:/app/app
       - ./apps/api/tests:/app/tests
     environment:
       - DEBUG=true
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-  db:
-    ports:
-      - "5433:5432"  # Expose on 5433 to avoid conflict with local postgres
 
 volumes:
   web_node_modules:
