@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github.min.css";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
 
 const API_BASE = "http://localhost:8000/api";
@@ -117,7 +121,7 @@ export default function ChatPage() {
   }, [messages, isLoading]);
 
   // ------------------------------------------------------------------
-  // 3. Send message
+  // 3. Send message (streaming via SSE)
   // ------------------------------------------------------------------
   async function sendMessage(e) {
     e.preventDefault();
@@ -134,34 +138,120 @@ export default function ChatPage() {
     setAttached([]);
     setIsLoading(true);
 
-    try {
-      const payload = {
-        message: text,
-        conversation_id: activeId,
-      };
+    // Add a placeholder assistant message that we'll stream into
+    const placeholderMsg = {
+      role: "assistant",
+      content: "",
+      created_at: new Date().toISOString(),
+      _streaming: true,
+    };
+    setMessages((prev) => [...prev, placeholderMsg]);
 
-      const res = await axios.post(`${API_BASE}/chat/`, payload, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+    try {
+      const res = await fetch(`${API_BASE}/chat/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          message: text,
+          conversation_id: activeId,
+        }),
       });
 
-      const { conversation_id, message: aiMessage } = res.data;
-
-      if (!activeId) {
-        setActiveId(conversation_id);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
-      fetchThreads();
 
-      setMessages((prev) => [...prev, aiMessage]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE lines from the buffer
+        const lines = buffer.split("\n");
+        // Keep the last (possibly incomplete) line in the buffer
+        buffer = lines.pop() || "";
+
+        let currentEvent = null;
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ") && currentEvent) {
+            const data = line.slice(6);
+
+            if (currentEvent === "token") {
+              // Append token to the last (streaming) assistant message
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last && last.role === "assistant") {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    content: last.content + data,
+                  };
+                }
+                return updated;
+              });
+            } else if (currentEvent === "done") {
+              try {
+                const payload = JSON.parse(data);
+                const { conversation_id, message: finalMsg } = payload;
+
+                // Replace streaming placeholder with final DB-backed message
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = {
+                    id: finalMsg.id,
+                    role: "assistant",
+                    content: finalMsg.content,
+                    created_at: finalMsg.created_at,
+                  };
+                  return updated;
+                });
+
+                if (!activeId) {
+                  setActiveId(conversation_id);
+                }
+                fetchThreads();
+              } catch (parseErr) {
+                console.error("Failed to parse done event:", parseErr);
+              }
+            }
+            currentEvent = null;
+          } else if (line === "") {
+            // Empty line = end of event block, reset
+            currentEvent = null;
+          }
+        }
+      }
     } catch (err) {
       console.error("Chat Error:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Error: Could not connect to backend.",
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      // Replace the streaming placeholder with an error message
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last && last.role === "assistant" && !last.content) {
+          updated[updated.length - 1] = {
+            role: "assistant",
+            content: "Error: Could not connect to backend.",
+            created_at: new Date().toISOString(),
+          };
+        } else {
+          updated.push({
+            role: "assistant",
+            content: "Error: Could not connect to backend.",
+            created_at: new Date().toISOString(),
+          });
+        }
+        return updated;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -359,15 +449,26 @@ export default function ChatPage() {
                       }`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm border leading-relaxed ${
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm border leading-relaxed overflow-hidden ${
                           isUser
                             ? "bg-indigo-600 text-white border-indigo-600"
                             : "bg-white text-slate-900 border-slate-200"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap font-medium">
-                          {m.content}
-                        </p>
+                        {isUser ? (
+                          <p className="whitespace-pre-wrap font-medium">
+                            {m.content}
+                          </p>
+                        ) : (
+                          <div className="chat-markdown [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-3 [&_h1]:mb-2 [&_h1:first-child]:mt-0 [&_h2]:text-base [&_h2]:font-bold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_pre]:bg-slate-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:overflow-x-auto [&_pre]:my-2 [&_pre]:text-xs [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:my-2 [&_blockquote]:text-slate-600 [&_hr]:my-3 [&_hr]:border-slate-200 [&_a]:text-indigo-600 [&_a]:underline [&_a]:break-all [&_table]:w-full [&_table]:my-2 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-slate-300 [&_td]:px-2 [&_td]:py-1">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              rehypePlugins={[rehypeHighlight]}
+                            >
+                              {m.content}
+                            </ReactMarkdown>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -378,7 +479,6 @@ export default function ChatPage() {
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse [animation-delay:150ms]" />
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse [animation-delay:300ms]" />
-                    <span className="ml-1">Thinking...</span>
                   </div>
                 </div>
               )}
