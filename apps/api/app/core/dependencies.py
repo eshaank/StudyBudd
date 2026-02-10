@@ -1,5 +1,6 @@
 """FastAPI dependencies for authentication and database access."""
 
+import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
 from typing import Annotated
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import async_session_maker
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 security = HTTPBearer()
 
@@ -83,6 +85,7 @@ def get_current_user(
 
     # Dev mode bypass: if debug=True and dev_user_id is set, skip JWT validation
     if settings.debug and settings.dev_user_id:
+        logger.debug("auth bypass dev_user_id=%s", settings.dev_user_id)
         return AuthenticatedUser(
             user_id=UUID(settings.dev_user_id),
             email="dev@localhost",
@@ -93,6 +96,7 @@ def get_current_user(
         unverified_header = jwt.get_unverified_header(token)
         alg = unverified_header.get("alg", "HS256")
     except jwt.exceptions.DecodeError as e:
+        logger.warning("auth failed invalid token format: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token format: {e!s}",
@@ -152,11 +156,13 @@ def get_current_user(
         return AuthenticatedUser(user_id=user_id, email=email)
 
     except jwt.ExpiredSignatureError:
+        logger.warning("auth failed token expired")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
         )
     except jwt.InvalidTokenError as e:
+        logger.warning("auth failed invalid token: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {e!s}",

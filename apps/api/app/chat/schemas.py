@@ -1,37 +1,28 @@
-"""Pydantic schemas for chat operations."""
-
 from pydantic import BaseModel
-
+from typing import List, Optional, Any
+from datetime import datetime
 
 class ChatRequest(BaseModel):
-    """Request schema for sending a chat message."""
-
-    # TODO: Define fields
-    # - message: str
-    # - conversation_id: UUID | None
-    # - document_ids: list[UUID] | None (for context)
-    pass
-
-
-class ChatResponse(BaseModel):
-    """Response schema for chat message."""
-
-    # TODO: Define fields
-    # - message: str
-    # - sources: list[SourceReference]
-    # - conversation_id: UUID
-    pass
-
+    """Schema for the data sent by the frontend user."""
+    message: str
+    conversation_id: Optional[str] = None # If None, a new conversation will be started
 
 class MessageResponse(BaseModel):
-    """Response schema for a single message."""
-
-    # TODO: Define fields
-    pass
-
+    """Schema for a single message object returned to the UI."""
+    id: str
+    role: str
+    content: str
+    created_at: datetime
+    sources: Optional[List[Any]] = None
 
 class ConversationResponse(BaseModel):
-    """Response schema for a conversation."""
+    """Schema for listing conversations in the sidebar."""
+    id: str
+    title: str
+    created_at: datetime
 
-    # TODO: Define fields
-    pass
+class ChatResponse(BaseModel):
+    """Full response schema containing the AI answer."""
+    conversation_id: str
+    message: MessageResponse
+    # sources: list[SourceReference] # TODO: Add source references later

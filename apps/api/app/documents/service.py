@@ -1,5 +1,6 @@
 """Business logic for document operations."""
 
+import logging
 from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.supabase import delete_file, upload_file
 from app.documents.models import Document
 from app.documents.schemas import DocumentCreate
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Constants
@@ -104,6 +107,7 @@ class DocumentService:
         await db.commit()
         await db.refresh(document)
 
+        logger.info("document uploaded user_id=%s document_id=%s filename=%s size=%d", user_id, document.id, file.filename, file_size)
         return document
 
     @staticmethod
@@ -156,9 +160,11 @@ class DocumentService:
             db: Database session.
             document: The document to delete.
         """
+        doc_id, user_id = document.id, document.user_id
         # Delete from Supabase Storage (ignore failures)
         delete_file(document.storage_path)
 
         # Delete from database
         await db.delete(document)
         await db.commit()
+        logger.info("document deleted document_id=%s user_id=%s", doc_id, user_id)

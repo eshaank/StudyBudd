@@ -7,6 +7,7 @@ This folder contains documentation for the StudyBudd application.
 - [Development Setup](./development-setup.md) - How to set up your local development environment
 - [Authentication](./authentication.md) - How authentication works and dev mode bypass
 - [Document Upload](./document-upload.md) - How the document upload feature works
+- [Chat Streaming](./chat-streaming.md) - How streaming works from browser to Together AI
 
 ## Quick Start
 

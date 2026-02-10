@@ -1,5 +1,6 @@
 """API router for document endpoints."""
 
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from app.documents.schemas import (
 )
 from app.documents.service import DocumentService
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
@@ -29,6 +31,7 @@ async def upload_document(
     - **Supported file types**: PDF, PNG, JPEG
     - **Maximum file size**: 10MB (configurable)
     """
+    logger.info("document upload started user_id=%s filename=%s", current_user.user_id, file.filename)
     document = await DocumentService.upload(
         db=db,
         file=file,
@@ -50,6 +53,7 @@ async def list_documents(
 
     Returns documents ordered by creation date (newest first).
     """
+    logger.debug("list_documents user_id=%s", current_user.user_id)
     documents = await DocumentService.list_by_user(db, current_user.user_id)
 
     return DocumentListResponse(
@@ -68,6 +72,7 @@ async def get_document(
 
     Only returns documents owned by the authenticated user.
     """
+    logger.debug("get_document user_id=%s document_id=%s", current_user.user_id, document_id)
     document = await DocumentService.get_by_id(db, document_id, current_user.user_id)
 
     if not document:
@@ -98,4 +103,5 @@ async def delete_document(
             detail="Document not found",
         )
 
+    logger.info("document delete user_id=%s document_id=%s", current_user.user_id, document_id)
     await DocumentService.delete(db, document)
