@@ -19,13 +19,20 @@ fi
 # Function to cleanup on exit
 cleanup() {
     echo -e "\n${YELLOW}Shutting down containers...${NC}"
-    $DOCKER_COMPOSE down
+    $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.dev.yml down
     echo -e "${GREEN}Containers stopped successfully.${NC}"
     exit 0
 }
 
 # Trap SIGINT (Ctrl+C) and SIGTERM
 trap cleanup SIGINT SIGTERM
+
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo -e "${RED}Error: .env file not found in project root.${NC}"
+    echo -e "${YELLOW}Copy docs/env.example to .env and fill in your Supabase credentials.${NC}"
+    exit 1
+fi
 
 # Check if ports are already in use
 check_port() {
@@ -36,21 +43,21 @@ check_port() {
     return 0
 }
 
-# Check required ports (5433 for postgres to avoid conflict with local)
-if ! check_port 3000 || ! check_port 8000 || ! check_port 5433; then
-    echo -e "${YELLOW}Please stop the processes using these ports or modify docker-compose.yml.${NC}"
+# Check required ports
+if ! check_port 3000 || ! check_port 8000; then
+    echo -e "${YELLOW}Please stop the processes using these ports.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}Starting StudyBudd application with Docker...${NC}"
+echo -e "${GREEN}Starting StudyBudd (dev mode, Supabase backend)...${NC}"
 echo -e "${YELLOW}Services:${NC}"
 echo -e "  - Frontend (Next.js):  http://localhost:3000"
 echo -e "  - Backend (FastAPI):   http://localhost:8000"
-echo -e "  - Database (Postgres): localhost:5433"
+echo -e "${YELLOW}View logs: docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop all containers${NC}\n"
 
-# Start docker compose in the foreground
-$DOCKER_COMPOSE up --build
+# Start docker compose in dev mode
+$DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 # If docker compose exits for any reason, run cleanup
 cleanup

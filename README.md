@@ -8,7 +8,7 @@ A full-stack study application with AI-powered features.
 |-------|------------|
 | Frontend | Next.js 15, React 19, Tailwind CSS |
 | Backend | FastAPI, Pydantic, PydanticAI |
-| Database | PostgreSQL 16 + pgvector |
+| Database | Supabase (PostgreSQL + Auth + Storage) |
 | Package Managers | npm (frontend), UV (backend) |
 | Containerization | Docker, Docker Compose |
 
@@ -36,10 +36,6 @@ study-budd/
 │       └── Dockerfile
 │
 ├── packages/                   # Shared code (optional)
-├── docker/
-│   └── postgres/
-│       └── init.sql
-│
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── Makefile
@@ -65,11 +61,9 @@ DEBUG=false
 # Security
 SECRET_KEY=your-secret-key-change-in-production
 
-# Database
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=studybudd
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/studybudd
+# Supabase (copy from docs/env.example)
+# NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_JWT_SECRET, etc.
+# DATABASE_URL - Supabase Postgres connection string
 
 # API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:8000
@@ -81,25 +75,20 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ### Running with Docker
 
-**Start all services:**
+**Development mode (requires `.env` in project root):**
 
 ```bash
-# Using the helper script
 ./docker-run.sh
-
-# Or using Make
-make up
-
-# Or directly with docker compose
-docker compose up
+# or
+make dev
 ```
 
-**Development mode (with hot reload):**
+**Production mode (detached):**
 
 ```bash
-make dev
+make up
 # or
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+docker compose up -d
 ```
 
 **Stop all services:**
@@ -128,12 +117,7 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-**Database:**
-
-```bash
-# Start only the database with Docker
-make db-up
-```
+**Database:** Supabase (hosted). No local setup required. Set `DATABASE_URL` in `.env`.
 
 ## Available Commands
 
@@ -165,7 +149,6 @@ Once the API is running, access the documentation at:
 |---------|-----|-------------|
 | Frontend | http://localhost:3000 | Next.js web application |
 | API | http://localhost:8000 | FastAPI backend |
-| Database | localhost:5433 | PostgreSQL with pgvector |
 
 ## License
 

@@ -6,12 +6,12 @@ This guide explains how to set up your local development environment for StudyBu
 
 - Node.js 18+
 - Python 3.12+
-- PostgreSQL (or Docker)
-- A Supabase project (for authentication and storage)
+- A Supabase project (database, auth, storage)
+- Docker (optional, for running services in containers)
 
 ## Environment Variables
 
-Create a `.env` file in the **project root** (`/study-budd/.env`). This file is shared by both the frontend and backend.
+Create a `.env` file in the **project root** (`/study-budd/.env`). Copy from `docs/env.example` and fill in your values.
 
 ### Required Variables
 
@@ -23,12 +23,8 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-role-key
 SUPABASE_JWT_SECRET=your-jwt-secret
 
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=studybudd
+# Database (Supabase Postgres connection string)
+DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres
 
 # Development Mode (enables auth bypass)
 DEBUG=true
@@ -46,107 +42,94 @@ DEV_USER_ID=00000000-0000-0000-0000-000000000001
    - **service_role** key → `SUPABASE_SERVICE_KEY`
 5. Go to **Project Settings** → **API** → **JWT Settings**
    - Copy **JWT Secret** → `SUPABASE_JWT_SECRET`
+6. Go to **Project Settings** → **Database** → **Connection string**
+   - Copy the URI (URI mode) → `DATABASE_URL`
 
-## Frontend Setup
+---
 
-The frontend is a Next.js application located in `apps/web/`.
+## Running with Docker (Recommended for Dev)
 
-```bash
-cd apps/web
-
-# Install dependencies
-npm install
-
-# Copy env file (Next.js reads from apps/web/.env or project root .env)
-# Option 1: Symlink to root .env
-ln -s ../../.env .env
-
-# Option 2: Copy the root .env
-cp ../../.env .env
-
-# Start development server
-npm run dev
-```
-
-The frontend will be available at `http://localhost:3000`.
-
-### Important: Environment File Location
-
-Next.js only reads `.env` files from its own directory (`apps/web/`). You have two options:
-
-1. **Symlink** (recommended): `ln -s ../../.env apps/web/.env`
-2. **Copy**: Manually copy the root `.env` to `apps/web/.env`
-
-## Backend Setup
-
-The backend is a FastAPI application located in `apps/api/`.
-
-```bash
-cd apps/api
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -e .
-
-# Run database migrations
-alembic upgrade head
-
-# Start development server
-uvicorn app.main:app --reload --port 8000
-```
-
-The API will be available at `http://localhost:8000`.
-API documentation is at `http://localhost:8000/docs`.
-
-## Database Setup
-
-### Option 1: Docker (Recommended)
+**One command** – starts frontend and API in dev mode with hot reload:
 
 ```bash
 # From project root
-docker-compose up -d postgres
+./docker-run.sh
+# or
+make dev
 ```
 
-### Option 2: Local PostgreSQL
+Requires `.env` in project root. Services:
 
-1. Install PostgreSQL
-2. Create a database named `studybudd`
-3. Update the `DB_*` variables in your `.env` file
+- **Frontend:** http://localhost:3000
+- **API:** http://localhost:8000
 
-## Running Both Services
+**View logs:**
 
-From the project root, you can run both services in separate terminals:
+```bash
+make logs
+# or
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
+```
 
-**Terminal 1 - Backend:**
+---
+
+## Running Locally (Without Docker)
+
+**Terminal 1 – Backend:**
+
 ```bash
 cd apps/api
-source .venv/bin/activate
-uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
-**Terminal 2 - Frontend:**
+**Terminal 2 – Frontend:**
+
 ```bash
 cd apps/web
 npm run dev
 ```
+
+Frontend at `http://localhost:3000`, API at `http://localhost:8000`.
+
+### Important: Environment File Location
+
+Next.js reads `.env` from its own directory. Create a symlink:
+
+```bash
+ln -s ../../.env apps/web/.env
+```
+
+---
+
+## Database Migrations
+
+Migrations run against Supabase Postgres. From project root:
+
+```bash
+make db-migrate
+# or
+cd apps/api && uv run alembic upgrade head
+```
+
+---
 
 ## Troubleshooting
 
 ### "Missing NEXT_PUBLIC_SUPABASE_URL" Error
 
-This means the frontend can't find the environment variables. Make sure:
-1. You have a `.env` file in `apps/web/` (symlink or copy from root)
-2. The variables are prefixed with `NEXT_PUBLIC_` for client-side access
-3. Restart the Next.js dev server after changing env vars
+1. Ensure `.env` exists in `apps/web/` (symlink or copy from root)
+2. Restart the Next.js dev server after changing env vars
 
 ### 401 Unauthorized on API Requests
 
-In development mode, make sure:
-1. `DEBUG=true` is set in your `.env`
-2. `DEV_USER_ID` is set to a valid UUID
-3. Restart the backend after changing env vars
+In development:
 
-See [Authentication](./authentication.md) for more details on dev mode bypass.
+1. Set `DEBUG=true` in `.env`
+2. Set `DEV_USER_ID` to a valid UUID
+3. Restart the backend
+
+See [Authentication](./authentication.md) for dev mode bypass.
+
+### Docker: "Cannot connect to API"
+
+Ensure `.env` is in the project root. Docker Compose passes it via `env_file`.
