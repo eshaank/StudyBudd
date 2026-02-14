@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.core.dependencies import CurrentUser
-from .schemas import ChatRequest, ChatResponse, ConversationResponse, MessageResponse
+from .schemas import ChatRequest, ChatResponse, ConversationResponse, ConversationUpdate, MessageResponse
 from .service import ChatService
 
 logger = logging.getLogger(__name__)
@@ -59,6 +59,29 @@ async def get_conversation_history(conversation_id: str, user: CurrentUser):
     logger.debug("get_conversation_history user_id=%s conversation_id=%s", user_id, conversation_id)
     history = await chat_service.get_history(conversation_id, user_id)
     return history
+
+
+@router.patch("/conversations/{conversation_id}")
+async def update_conversation(conversation_id: str, body: ConversationUpdate, user: CurrentUser):
+    """Endpoint to update a conversation (e.g. rename title)."""
+    from .service import supabase
+
+    user_id = str(user.user_id)
+    logger.debug("update_conversation user_id=%s conversation_id=%s title=%s", user_id, conversation_id, body.title)
+
+    conv_res = (
+        supabase.table("conversations")
+        .select("id")
+        .eq("id", conversation_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    if not conv_res.data:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    supabase.table("conversations").update({"title": body.title.strip() or "Untitled"}).eq("id", conversation_id).execute()
+    return {"status": "ok"}
 
 
 @router.delete("/conversations/{conversation_id}")

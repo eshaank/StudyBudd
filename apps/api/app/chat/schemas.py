@@ -21,6 +21,11 @@ class ConversationResponse(BaseModel):
     title: str
     created_at: datetime
 
+
+class ConversationUpdate(BaseModel):
+    """Schema for updating a conversation (e.g. rename)."""
+    title: str
+
 class ChatResponse(BaseModel):
     """Full response schema containing the AI answer."""
     conversation_id: str

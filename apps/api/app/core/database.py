@@ -13,6 +13,8 @@ settings = get_settings()
 connect_args = {}
 if "supabase" in settings.database_url or "supabase" in settings.db_host:
     connect_args["ssl"] = "require"
+# Disable prepared statement cache when using pgbouncer (e.g. Supabase)
+connect_args["statement_cache_size"] = 0
 
 engine = create_async_engine(
     settings.database_url,
