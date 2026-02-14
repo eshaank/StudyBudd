@@ -11,6 +11,7 @@ app/core/__init__.py
 app/core/config.py
 app/core/database.py
 app/core/dependencies.py
+app/core/supabase-Anderson_PC.py
 app/core/supabase.py
 app/documents/__init__.py
 app/documents/models.py
@@ -30,3 +31,4 @@ studybudd_api.egg-info/SOURCES.txt
 studybudd_api.egg-info/dependency_links.txt
 studybudd_api.egg-info/requires.txt
 studybudd_api.egg-info/top_level.txt
+tests/test_chat_full.py

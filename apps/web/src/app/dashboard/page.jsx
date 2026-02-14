@@ -15,21 +15,21 @@ export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
-  // (Later) Replace these with real DB data from your tables:
   const [recent, setRecent] = useState({
-    lastSession: null, // { course: "PHIL-100", minutes: 25, at: Date.now() }
-    continueCards: [], // array of cards
+    lastSession: null,
+    continueCards: [],
   });
 
   useEffect(() => {
     const supabase = createSupabaseBrowser();
 
     async function load() {
+      setLoading(true);
+
       const { data } = await supabase.auth.getUser();
       const u = data?.user ?? null;
       setUser(u);
 
-      //  placeholder “personalization” without DB
       if (u?.email) {
         setRecent({
           lastSession: {
@@ -39,6 +39,7 @@ export default function DashboardHome() {
           },
           continueCards: [
             {
+              id: "cont-files",
               type: "notes",
               title: "PHIL-100 — Free Will Notes",
               subtitle: "Last opened: yesterday",
@@ -46,6 +47,7 @@ export default function DashboardHome() {
               badge: "Files",
             },
             {
+              id: "cont-chat",
               type: "chat",
               title: "Last Chat: Compatibilism vs Determinism",
               subtitle: "Continue your thread",
@@ -53,14 +55,25 @@ export default function DashboardHome() {
               badge: "Chat",
             },
             {
+              id: "cont-focus",
               type: "pomodoro",
               title: "Pomodoro Focus",
               subtitle: "2 sessions left today",
               href: "/dashboard",
               badge: "Focus",
             },
+            {
+              id: "cont-flashcards",
+              type: "flashcards",
+              title: "Flashcards — PHIL-100 Deck",
+              subtitle: "7 cards due today",
+              href: "/dashboard/flashcards",
+              badge: "Review",
+            },
           ],
         });
+      } else {
+        setRecent({ lastSession: null, continueCards: [] });
       }
 
       setLoading(false);
@@ -99,9 +112,7 @@ export default function DashboardHome() {
               · {recent.lastSession.minutes} min focus
             </p>
           ) : (
-            <p className="text-slate-600">
-              Let’s pick up where you left off.
-            </p>
+            <p className="text-slate-600">Let’s pick up where you left off.</p>
           )}
         </div>
       </section>
@@ -127,9 +138,9 @@ export default function DashboardHome() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {recent.continueCards.map((c, idx) => (
+            {recent.continueCards.map((c) => (
               <Link
-                key={idx}
+                key={c.id}
                 href={c.href}
                 className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition"
               >
@@ -143,12 +154,8 @@ export default function DashboardHome() {
                 </div>
 
                 <div className="mt-3">
-                  <div className="font-extrabold text-slate-900">
-                    {c.title}
-                  </div>
-                  <div className="mt-1 text-sm text-slate-600">
-                    {c.subtitle}
-                  </div>
+                  <div className="font-extrabold text-slate-900">{c.title}</div>
+                  <div className="mt-1 text-sm text-slate-600">{c.subtitle}</div>
                 </div>
               </Link>
             ))}
@@ -160,7 +167,8 @@ export default function DashboardHome() {
       <section className="space-y-4">
         <h3 className="text-xl font-bold text-slate-900">Your tools</h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* ✅ changed lg:grid-cols-4 -> lg:grid-cols-5 to fit 5 tools */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <ToolCard
             title="Pomodoro"
             desc="Focus sessions + streaks"
@@ -185,10 +193,16 @@ export default function DashboardHome() {
             href="/dashboard/quizzes"
             pill="Preview"
           />
+          <ToolCard
+            title="Flashcards"
+            desc="Create and review flashcards"
+            href="/dashboard/flashcards"
+            pill="New"
+          />
         </div>
       </section>
 
-      {/* Soft “upgrade” area (non-annoying) */}
+      {/* Soft “upgrade” area */}
       <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-50 to-slate-50 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

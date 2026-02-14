@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePomodoro } from "./PomodoroProvider";
 
 export default function PomodoroSidebarCard() {
   const {
+    // if you used my updated store, hydrated exists; if not, it will be undefined
+    hydrated,
+
     studyMinutes,
     shortBreakMinutes,
     longBreakMinutes,
@@ -34,7 +37,6 @@ export default function PomodoroSidebarCard() {
   // Ring math
   const radius = 46;
   const stroke = 8;
-
   const circumference = useMemo(() => 2 * Math.PI * radius, [radius]);
 
   const dashOffset = useMemo(() => {
@@ -42,13 +44,16 @@ export default function PomodoroSidebarCard() {
     return circumference * (1 - pct / 100);
   }, [circumference, ringPercent]);
 
+  const label = hydrated === false ? "Loading..." : modeLabel;
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur shadow-sm overflow-hidden">
-      <div className="px-4 pt-4 pb-3">
+    <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur shadow-sm overflow-visible">
+      <div className="px-4 pt-4 pb-4">
+        {/* Header */}
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="text-xs font-semibold text-slate-500">POMODORO</div>
-            <div className="mt-1 font-extrabold text-slate-900">{modeLabel}</div>
+            <div className="mt-1 font-extrabold text-slate-900 truncate">{label}</div>
             <div className="text-xs text-slate-500 mt-1">
               Focus sessions:{" "}
               <span className="font-semibold text-slate-700">{cycleCount}</span>
@@ -57,23 +62,19 @@ export default function PomodoroSidebarCard() {
 
           <button
             onClick={() => setShowSettings((v) => !v)}
-            className="text-xs font-bold rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 hover:bg-slate-50"
+            className="shrink-0 text-xs font-bold rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 hover:bg-slate-50"
             aria-label="Toggle pomodoro settings"
+            type="button"
           >
-            {showSettings ? "Hide" : "Settings"}
+            {showSettings ? "Done" : "Settings"}
           </button>
         </div>
 
-        {/* Ring + Actions */}
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Ring + Controls */}
+        <div className="mt-4 flex items-center gap-4">
           {/* Progress Ring */}
-          <div className="relative w-[120px] h-[120px] shrink-0 self-center sm:self-auto">
-            <svg
-              className="w-full h-full -rotate-90"
-              viewBox="0 0 120 120"
-              aria-label="Pomodoro progress ring"
-            >
-              {/* track */}
+          <div className="relative w-[112px] h-[112px] shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
               <circle
                 cx="60"
                 cy="60"
@@ -82,7 +83,6 @@ export default function PomodoroSidebarCard() {
                 strokeWidth={stroke}
                 className="stroke-slate-200"
               />
-              {/* soft glow behind progress */}
               <circle
                 cx="60"
                 cy="60"
@@ -91,7 +91,6 @@ export default function PomodoroSidebarCard() {
                 strokeWidth={stroke}
                 className="stroke-indigo-500/20"
               />
-              {/* progress */}
               <circle
                 cx="60"
                 cy="60"
@@ -101,7 +100,7 @@ export default function PomodoroSidebarCard() {
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={dashOffset}
-                className="stroke-indigo-500"
+                className="stroke-indigo-600"
               />
             </svg>
 
@@ -115,20 +114,36 @@ export default function PomodoroSidebarCard() {
             </div>
           </div>
 
-          {/* Buttons + modes */}
+          {/* Right controls */}
           <div className="flex-1 min-w-0">
-            <div className="flex gap-2">
+            {/* Segmented Mode Switch (fits sidebar) */}
+            <div className="grid grid-cols-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
+              <Seg active={mode === "focus"} onClick={() => switchMode("focus")}>
+                Focus
+              </Seg>
+              <Seg active={mode === "shortBreak"} onClick={() => switchMode("shortBreak")}>
+                Short
+              </Seg>
+              <Seg active={mode === "longBreak"} onClick={() => switchMode("longBreak")}>
+                Long
+              </Seg>
+            </div>
+
+            {/* Actions (wrap + equal widths) */}
+            <div className="mt-3 flex flex-wrap gap-2">
               {!isRunning ? (
                 <button
                   onClick={start}
-                  className="flex-1 rounded-xl bg-indigo-600 px-3 py-2 text-white font-bold hover:bg-indigo-700"
+                  className="flex-1 min-w-[110px] rounded-xl bg-indigo-600 px-3 py-2 text-white font-bold hover:bg-indigo-700"
+                  type="button"
                 >
                   Start
                 </button>
               ) : (
                 <button
                   onClick={pause}
-                  className="flex-1 rounded-xl bg-slate-900 px-3 py-2 text-white font-bold hover:bg-slate-800"
+                  className="flex-1 min-w-[110px] rounded-xl bg-slate-900 px-3 py-2 text-white font-bold hover:bg-slate-800"
+                  type="button"
                 >
                   Pause
                 </button>
@@ -136,27 +151,16 @@ export default function PomodoroSidebarCard() {
 
               <button
                 onClick={resetTimer}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-bold text-slate-800 hover:bg-slate-50"
+                className="flex-1 min-w-[110px] rounded-xl border border-slate-200 bg-white px-3 py-2 font-bold text-slate-800 hover:bg-slate-50"
+                type="button"
               >
                 Reset
               </button>
             </div>
 
-            {/* Mode pills */}
-            <div className="mt-3 grid grid-cols-3 gap-2 w-full min-w-0">
-              <ModePill active={mode === "focus"} onClick={() => switchMode("focus")}>
-                Focus
-              </ModePill>
-              <ModePill
-                active={mode === "shortBreak"}
-                onClick={() => switchMode("shortBreak")}
-              >
-                Short Break
-              </ModePill>
-              <ModePill active={mode === "longBreak"} onClick={() => switchMode("longBreak")}>
-                Long Break
-              </ModePill>
-            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Auto-switches to breaks when focus ends.
+            </p>
           </div>
         </div>
       </div>
@@ -203,30 +207,21 @@ export default function PomodoroSidebarCard() {
             />
           </div>
 
-          <p className="mt-3 text-[11px] text-slate-500">
-            Tip: Settings lock while running.
-          </p>
+          <p className="mt-3 text-[11px] text-slate-500">Tip: Settings lock while running.</p>
         </div>
       ) : null}
     </div>
   );
 }
 
-function ModePill({ active, onClick, children }) {
+function Seg({ active, onClick, children }) {
   return (
     <button
       onClick={onClick}
       className={[
-        "w-full min-w-0",
-        "rounded-xl border transition",
-        "px-2 py-2",
-        "text-[11px] font-extrabold",
-        "whitespace-nowrap overflow-hidden text-ellipsis",
-        active
-          ? "bg-indigo-600 text-white border-indigo-600"
-          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",
+        "px-2 py-2 text-xs font-extrabold transition",
+        active ? "bg-indigo-600 text-white" : "bg-white text-slate-700 hover:bg-slate-50",
       ].join(" ")}
-      title={typeof children === "string" ? children : undefined}
       type="button"
     >
       {children}
