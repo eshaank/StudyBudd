@@ -388,7 +388,8 @@ export default function ChatPage() {
           flex flex-col bg-white border-r border-slate-200 shadow-xl
           transition-transform duration-200 ease-in-out
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:relative lg:z-auto lg:shadow-none lg:rounded-l-2xl
+          lg:relative lg:z-auto lg:shadow-none lg:rounded-l-2xl
+          ${sidebarOpen ? "lg:translate-x-0" : "lg:w-0 lg:min-w-0 lg:overflow-hidden lg:-translate-x-full lg:border-r-0"}
         `}
       >
         {/* Sidebar header */}
@@ -400,7 +401,7 @@ export default function ChatPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="lg:hidden rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12" />
@@ -482,6 +483,22 @@ export default function ChatPage() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
+          </button>
+          <button
+            onClick={() => setSidebarOpen((o) => !o)}
+            className="hidden lg:inline-flex rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 transition-colors"
+            title={sidebarOpen ? "Hide chat history" : "Show chat history"}
+            aria-label={sidebarOpen ? "Hide chat history" : "Show chat history"}
+          >
+            {sidebarOpen ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
           </button>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-extrabold text-slate-900 truncate">
