@@ -82,6 +82,31 @@ async def upload_file(
     return storage_path
 
 
+def download_file(storage_path: str, bucket: str | None = None) -> bytes:
+    """Download a file from Supabase Storage.
+
+    Args:
+        storage_path: Path to the file in storage.
+        bucket: Storage bucket name (defaults to config value).
+
+    Returns:
+        File content as bytes.
+
+    Raises:
+        HTTPException: If download fails.
+    """
+    bucket_name = bucket or settings.supabase_storage_bucket
+    try:
+        client = get_supabase_client()
+        data = client.storage.from_(bucket_name).download(storage_path)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download file: {e!s}",
+        )
+
+
 def delete_file(storage_path: str, bucket: str | None = None) -> bool:
     """Delete a file from Supabase Storage.
 

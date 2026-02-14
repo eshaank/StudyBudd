@@ -31,7 +31,7 @@ async_session_maker = async_sessionmaker(
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting database sessions."""
     async with async_session_maker() as session:
-        # Supabase Vector: pgvector type/operators live in vector_db; set so queries resolve
+        # Supabase: include extensions so unqualified "vector" resolves (pgvector may be in public or extensions)
         if "supabase" in settings.database_url or "supabase" in settings.db_host:
-            await session.execute(text("SET search_path TO public, vector_db"))
+            await session.execute(text("SET search_path TO public, extensions, vector_db"))
         yield session

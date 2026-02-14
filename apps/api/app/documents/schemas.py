@@ -41,6 +41,9 @@ class DocumentUploadResponse(BaseModel):
 
     message: str
     document: DocumentResponse
+    processing_status: str | None = None  # "ready" | "error" | "unsupported" | None
+    chunks_count: int | None = None
+    processing_error: str | None = None
 
 
 class DocumentListResponse(BaseModel):

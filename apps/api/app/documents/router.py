@@ -13,6 +13,8 @@ from app.documents.schemas import (
     DocumentUploadResponse,
 )
 from app.documents.service import DocumentService
+from app.documents.text_extraction import extract_text_from_document
+from app.processing.service import ProcessingService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -20,15 +22,19 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
-    file: Annotated[UploadFile, File(description="Document file (PDF, PNG, or JPEG)")],
+    file: Annotated[
+        UploadFile,
+        File(description="Document file (PDF, PNG, JPEG, TXT, or CSV)"),
+    ],
     current_user: CurrentUser,
     db: DbSession,
 ) -> DocumentUploadResponse:
     """Upload a document.
 
     Uploads the file to Supabase Storage and stores metadata in the database.
+    For text and CSV files, RAG indexing runs immediately.
 
-    - **Supported file types**: PDF, PNG, JPEG
+    - **Supported file types**: PDF, PNG, JPEG, TXT, CSV
     - **Maximum file size**: 10MB (configurable)
     """
     logger.info("document upload started user_id=%s filename=%s", current_user.user_id, file.filename)
@@ -38,9 +44,37 @@ async def upload_document(
         user_id=current_user.user_id,
     )
 
+    processing_status: str | None = None
+    chunks_count: int | None = None
+    processing_error: str | None = None
+
+    if document.file_type in ("text", "csv"):
+        try:
+            text = extract_text_from_document(document)
+            result = await ProcessingService.process_document(
+                db=db,
+                document_id=document.id,
+                title=document.original_filename or "untitled",
+                text=text,
+            )
+            processing_status = result.status
+            chunks_count = result.chunks_count
+            processing_error = result.error
+        except ValueError as e:
+            processing_status = "error"
+            processing_error = str(e)
+        except HTTPException as e:
+            processing_status = "error"
+            processing_error = e.detail or "Embedding failed."
+    else:
+        processing_status = "unsupported"
+
     return DocumentUploadResponse(
         message="Document uploaded successfully",
         document=DocumentResponse.model_validate(document),
+        processing_status=processing_status,
+        chunks_count=chunks_count,
+        processing_error=processing_error,
     )
 
 

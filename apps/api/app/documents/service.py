@@ -4,12 +4,13 @@ import logging
 from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.supabase import delete_file, upload_file
 from app.documents.models import Document
 from app.documents.schemas import DocumentCreate
+from app.processing.models import Document as ProcessingDocument
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,9 @@ ALLOWED_MIME_TYPES: dict[str, str] = {
     "application/pdf": "pdf",
     "image/png": "image",
     "image/jpeg": "image",
+    "text/plain": "text",
+    "text/csv": "csv",
+    "application/csv": "csv",
 }
 
 
@@ -40,7 +44,7 @@ class DocumentService:
             file: The uploaded file to validate.
 
         Returns:
-            The file type category ("pdf" or "image").
+            The file type category ("pdf", "image", "text", or "csv").
 
         Raises:
             HTTPException: If file type is not allowed.
@@ -54,7 +58,7 @@ class DocumentService:
         if file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File type {file.content_type} not allowed. Allowed: PDF, PNG, JPEG",
+                detail=f"File type {file.content_type} not allowed. Allowed: PDF, PNG, JPEG, TXT, CSV",
             )
 
         return ALLOWED_MIME_TYPES[file.content_type]
@@ -156,11 +160,13 @@ class DocumentService:
     async def delete(db: AsyncSession, document: Document) -> None:
         """Delete a document from storage and database.
 
-        Args:
-            db: Database session.
-            document: The document to delete.
+        Also removes processing_documents and document_chunks for RAG.
         """
         doc_id, user_id = document.id, document.user_id
+
+        # Delete RAG processing data (chunks cascade from processing_documents)
+        await db.execute(delete(ProcessingDocument).where(ProcessingDocument.id == doc_id))
+
         # Delete from Supabase Storage (ignore failures)
         delete_file(document.storage_path)
 
