@@ -1,5 +1,7 @@
 """Business logic for document operations."""
 
+from __future__ import annotations
+
 import logging
 from uuid import UUID
 
@@ -115,21 +117,25 @@ class DocumentService:
         return document
 
     @staticmethod
-    async def list_by_user(db: AsyncSession, user_id: UUID) -> list[Document]:
-        """Get all documents for a user.
+    async def list_by_user(
+        db: AsyncSession,
+        user_id: UUID,
+        folder_id: UUID | None = None,
+    ) -> list[Document]:
+        """Get documents for a user, optionally filtered by folder.
 
         Args:
             db: Database session.
             user_id: The user's ID.
+            folder_id: If provided, return only docs in this folder.
 
         Returns:
             List of documents ordered by creation date (newest first).
         """
-        result = await db.execute(
-            select(Document)
-            .where(Document.user_id == user_id)
-            .order_by(Document.created_at.desc())
-        )
+        stmt = select(Document).where(Document.user_id == user_id)
+        if folder_id is not None:
+            stmt = stmt.where(Document.folder_id == folder_id)
+        result = await db.execute(stmt.order_by(Document.created_at.desc()))
         return list(result.scalars().all())
 
     @staticmethod

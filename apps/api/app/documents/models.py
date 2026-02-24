@@ -1,11 +1,13 @@
 """SQLAlchemy models for the documents module."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
+from sqlalchemy import ForeignKey, String, func
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # =============================================================================
 # Base Classes and Mixins
@@ -42,6 +44,38 @@ class UUIDMixin:
 
 
 # =============================================================================
+# Folder Entity
+# =============================================================================
+
+
+class Folder(Base, UUIDMixin, TimestampMixin):
+    """Entity for organizing documents into user-defined folders/tasks.
+
+    Attributes:
+        id: Unique identifier (UUID).
+        user_id: ID of the user who owns this folder.
+        name: Display name of the folder (e.g. "History Essay", "Math 101").
+        documents: Documents assigned to this folder.
+    """
+
+    __tablename__ = "folders"
+
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), index=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    documents: Mapped[list[Document]] = relationship(
+        "Document",
+        back_populates="folder",
+        foreign_keys="[Document.folder_id]",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Folder(id={self.id}, name={self.name!r}, user_id={self.user_id})>"
+
+
+# =============================================================================
 # Document Entity
 # =============================================================================
 
@@ -52,6 +86,7 @@ class Document(Base, UUIDMixin, TimestampMixin):
     Attributes:
         id: Unique identifier (UUID).
         user_id: ID of the user who owns the document.
+        folder_id: Optional folder this document belongs to (NULL = unfiled).
         filename: Generated unique filename in storage.
         original_filename: Original filename uploaded by user.
         file_type: Type category ("pdf" or "image").
@@ -64,13 +99,27 @@ class Document(Base, UUIDMixin, TimestampMixin):
 
     __tablename__ = "documents"
 
-    user_id: Mapped[UUID] = mapped_column(index=True)
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), index=True, nullable=False
+    )
+    folder_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("folders.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     filename: Mapped[str] = mapped_column(String(255))
     original_filename: Mapped[str] = mapped_column(String(255))
     file_type: Mapped[str] = mapped_column(String(50))
     mime_type: Mapped[str] = mapped_column(String(100))
     file_size: Mapped[int]
     storage_path: Mapped[str] = mapped_column(String(500))
+
+    folder: Mapped[Folder | None] = relationship(
+        "Folder",
+        back_populates="documents",
+        foreign_keys=[folder_id],
+    )
 
     def __repr__(self) -> str:
         """Return string representation."""

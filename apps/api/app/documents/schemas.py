@@ -1,5 +1,7 @@
 """Pydantic schemas for document API operations."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID
 
@@ -30,6 +32,7 @@ class DocumentResponse(DocumentBase):
 
     id: UUID
     user_id: UUID
+    folder_id: UUID | None = None
     original_filename: str
     storage_path: str
     created_at: datetime

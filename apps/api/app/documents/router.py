@@ -1,10 +1,12 @@
 """API router for document endpoints."""
 
+from __future__ import annotations
+
 import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 
 from app.core.dependencies import CurrentUser, DbSession
 from app.documents.schemas import (
@@ -14,6 +16,8 @@ from app.documents.schemas import (
 )
 from app.documents.service import DocumentService
 from app.documents.text_extraction import extract_text_from_document
+from app.folders.schemas import AssignFolderRequest
+from app.folders.service import FolderService
 from app.processing.service import ProcessingService
 
 logger = logging.getLogger(__name__)
@@ -82,13 +86,11 @@ async def upload_document(
 async def list_documents(
     current_user: CurrentUser,
     db: DbSession,
+    folder_id: UUID | None = Query(default=None, description="Filter by folder. Omit for all documents."),
 ) -> DocumentListResponse:
-    """List all documents for the authenticated user.
-
-    Returns documents ordered by creation date (newest first).
-    """
-    logger.debug("list_documents user_id=%s", current_user.user_id)
-    documents = await DocumentService.list_by_user(db, current_user.user_id)
+    """List documents for the authenticated user, optionally filtered by folder."""
+    logger.debug("list_documents user_id=%s folder_id=%s", current_user.user_id, folder_id)
+    documents = await DocumentService.list_by_user(db, current_user.user_id, folder_id=folder_id)
 
     return DocumentListResponse(
         documents=[DocumentResponse.model_validate(doc) for doc in documents],
@@ -115,6 +117,24 @@ async def get_document(
             detail="Document not found",
         )
 
+    return DocumentResponse.model_validate(document)
+
+
+@router.patch("/{document_id}/folder", response_model=DocumentResponse)
+async def assign_document_folder(
+    document_id: UUID,
+    body: AssignFolderRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> DocumentResponse:
+    """Assign or remove a document from a folder.
+
+    Pass ``folder_id: null`` to unfile the document.
+    """
+    document = await DocumentService.get_by_id(db, document_id, current_user.user_id)
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    document = await FolderService.assign_document(db, document, body.folder_id, current_user.user_id)
     return DocumentResponse.model_validate(document)
 
 
