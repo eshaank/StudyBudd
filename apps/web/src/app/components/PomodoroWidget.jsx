@@ -6,23 +6,32 @@ import { usePomodoro } from "./PomodoroProvider";
 
 export default function PomodoroWidget() {
   const [open, setOpen] = useState(false);
-  const { hydrated, mm, ss, pad2, modeLabel, isRunning, start, pause } = usePomodoro();
+  const { hydrated, mm, ss, pad2, modeLabel, isRunning, mode, start, pause } = usePomodoro();
 
-  const label = hydrated ? modeLabel : "Loading...";
+  const label = hydrated ? modeLabel : "...";
+
+  const accentColor =
+    mode === "focus"
+      ? "text-indigo-600"
+      : mode === "shortBreak"
+      ? "text-emerald-600"
+      : "text-blue-600";
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
       {open ? (
-        <div className="w-[380px] max-w-[92vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-            <div className="flex flex-col leading-tight min-w-0">
-              <div className="font-extrabold text-slate-900">Pomodoro</div>
-              <div className="text-xs text-slate-500 truncate">{label}</div>
+        <div className="w-[360px] max-w-[92vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+          {/* Panel header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                Pomodoro
+              </p>
+              <p className="text-sm font-bold text-slate-700">{label}</p>
             </div>
-
             <button
               onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-1 text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200"
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
               type="button"
             >
               Minimize
@@ -34,6 +43,7 @@ export default function PomodoroWidget() {
           </div>
         </div>
       ) : (
+        /* Compact floating bubble */
         <button
           onClick={() => setOpen(true)}
           className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-xl hover:shadow-2xl transition"
@@ -41,8 +51,10 @@ export default function PomodoroWidget() {
           type="button"
         >
           <div className="flex flex-col items-start leading-tight min-w-0">
-            <div className="text-xs text-slate-500 truncate">{label}</div>
-            <div className="text-lg font-extrabold tabular-nums text-slate-900">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              {label}
+            </div>
+            <div className={`text-xl font-extrabold tabular-nums ${accentColor}`}>
               {pad2(mm)}:{pad2(ss)}
             </div>
           </div>
@@ -53,7 +65,7 @@ export default function PomodoroWidget() {
                 e.stopPropagation();
                 start();
               }}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition"
               type="button"
             >
               Start
@@ -64,7 +76,7 @@ export default function PomodoroWidget() {
                 e.stopPropagation();
                 pause();
               }}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+              className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-700 transition"
               type="button"
             >
               Pause
