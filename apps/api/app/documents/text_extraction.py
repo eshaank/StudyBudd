@@ -3,6 +3,7 @@
 import csv
 import io
 from typing import TYPE_CHECKING
+from pypdf import PdfReader
 
 from app.core.supabase import download_file
 from app.documents.models import Document
@@ -41,5 +42,17 @@ def extract_text_from_document(document: Document) -> str:
         for row in reader:
             parts.extend(cell.strip() for cell in row if cell.strip())
         return " ".join(parts).strip()
+    
+    if document.file_type == "pdf":
+        content = download_file(document.storage_path)
+        reader = PdfReader(io.BytesIO(content))
+
+        parts: list[str] = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                parts.append(text.strip())
+
+        return "\n\n".join(parts).strip()
 
     return ""

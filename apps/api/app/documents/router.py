@@ -48,7 +48,7 @@ async def upload_document(
     chunks_count: int | None = None
     processing_error: str | None = None
 
-    if document.file_type in ("text", "csv"):
+    if document.file_type in ("text", "csv", "pdf"):
         try:
             text = extract_text_from_document(document)
             result = await ProcessingService.process_document(

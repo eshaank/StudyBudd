@@ -56,7 +56,7 @@ async def process_document(
     """Re-run RAG processing for an uploaded document (text/csv only)."""
     doc = await _verify_document_ownership(document_id, current_user.user_id, db)
 
-    if doc.file_type not in ("text", "csv"):
+    if doc.file_type not in ("text", "csv", "pdf"):
         raise HTTPException(
             status_code=400,
             detail=f"Only text and CSV documents can be processed; got file_type={doc.file_type!r}",
