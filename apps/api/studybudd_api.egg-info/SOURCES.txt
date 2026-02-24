@@ -18,6 +18,7 @@ app/documents/models.py
 app/documents/router.py
 app/documents/schemas.py
 app/documents/service.py
+app/documents/text_extraction.py
 app/inference/__init__.py
 app/inference/client.py
 app/inference/prompts.py
