@@ -14,11 +14,13 @@ from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.documents.models import Document as UserDocument
 from app.processing.models import Document, DocumentChunk
 from app.processing.schemas import (
     ChunkResponse,
     ProcessingStatusResponse,
     QueryResponse,
+    RetrieveResult,
 )
 
 # Together BAAI/bge-base-en-v1.5 outputs 768. Must match Vector(dim) in models.py.
@@ -96,6 +98,30 @@ async def embed(texts: list[str]) -> list[list[float]]:
             ),
         )
     return vectors
+
+
+# ----------------------------
+# Vector schema helper
+# ----------------------------
+async def _resolve_vec_schema(db: AsyncSession) -> str:
+    """Resolve the schema where the pgvector 'vector' type lives on this connection."""
+    result = await db.execute(
+        text("""
+            SELECT n.nspname FROM pg_type t
+            JOIN pg_namespace n ON t.typnamespace = n.oid
+            WHERE t.typname = 'vector'
+            ORDER BY CASE n.nspname WHEN 'public' THEN 0 WHEN 'extensions' THEN 1 ELSE 2 END
+            LIMIT 1
+        """)
+    )
+    row = result.one_or_none()
+    if not row:
+        raise HTTPException(
+            status_code=503,
+            detail="Vector type not found. Use direct DB connection (port 5432) or enable pgvector.",
+        )
+    schema = row[0]
+    return schema if schema in ("public", "extensions", "vector_db") else "extensions"
 
 
 # ----------------------------
@@ -245,29 +271,9 @@ class ProcessingService:
             )
 
         qvec = (await embed([question]))[0]
-
-        # Resolve vector type schema on this connection (pooler vs direct can differ on Supabase).
-        vec_schema_result = await db.execute(
-            text("""
-                SELECT n.nspname FROM pg_type t
-                JOIN pg_namespace n ON t.typnamespace = n.oid
-                WHERE t.typname = 'vector'
-                ORDER BY CASE n.nspname WHEN 'public' THEN 0 WHEN 'extensions' THEN 1 ELSE 2 END
-                LIMIT 1
-            """)
-        )
-        vec_schema_row = vec_schema_result.one_or_none()
-        if not vec_schema_row:
-            raise HTTPException(
-                status_code=503,
-                detail="Vector type not found. Use direct DB connection (port 5432) or enable pgvector.",
-            )
-        vec_schema = vec_schema_row[0]
-        if vec_schema not in ("public", "extensions", "vector_db"):
-            vec_schema = "extensions"
-
+        vec_schema = await _resolve_vec_schema(db)
         qvec_str = "[" + ",".join(str(x) for x in qvec) + "]"
-        # Schema-qualify type so asyncpg resolves it at prepare.
+
         stmt = text(
             f"""
             SELECT id, document_id, chunk_index, content, metadata, embedding, created_at
@@ -306,3 +312,97 @@ class ProcessingService:
             answer=answer,
             context_chunks=context_chunks,
         )
+
+    @staticmethod
+    async def rag_retrieve_multi(
+        db: AsyncSession,
+        user_id: UUID,
+        question: str,
+        top_k: int = 5,
+        document_ids: list[UUID] | None = None,
+        folder_ids: list[UUID] | None = None,
+    ) -> RetrieveResult:
+        """Retrieve relevant chunks across multiple documents without generating an answer.
+
+        The document set is resolved in this priority:
+        1. ``folder_ids`` provided → docs in those folders that are RAG-ready.
+        2. ``document_ids`` provided → those specific docs (ownership verified, must be ready).
+        3. Neither provided → all of the user's RAG-ready documents.
+
+        Returns context text and the matched chunks for source attribution.
+        """
+        # --- Resolve document ID set ---
+        if folder_ids is not None and len(folder_ids) > 0:
+            rows = await db.execute(
+                select(UserDocument.id)
+                .join(Document, Document.id == UserDocument.id)
+                .where(
+                    UserDocument.user_id == user_id,
+                    UserDocument.folder_id.in_(folder_ids),
+                    Document.status == "ready",
+                )
+            )
+            resolved_ids = [r[0] for r in rows.all()]
+        elif document_ids is not None and len(document_ids) > 0:
+            # Verify ownership + ready status for the provided IDs
+            rows = await db.execute(
+                select(UserDocument.id)
+                .join(Document, Document.id == UserDocument.id)
+                .where(
+                    UserDocument.id.in_(document_ids),
+                    UserDocument.user_id == user_id,
+                    Document.status == "ready",
+                )
+            )
+            resolved_ids = [r[0] for r in rows.all()]
+        else:
+            # All of the user's ready documents
+            rows = await db.execute(
+                select(UserDocument.id)
+                .join(Document, Document.id == UserDocument.id)
+                .where(
+                    UserDocument.user_id == user_id,
+                    Document.status == "ready",
+                )
+            )
+            resolved_ids = [r[0] for r in rows.all()]
+
+        if not resolved_ids:
+            return RetrieveResult(context_text="", context_chunks=[])
+
+        qvec = (await embed([question]))[0]
+        vec_schema = await _resolve_vec_schema(db)
+        qvec_str = "[" + ",".join(str(x) for x in qvec) + "]"
+
+        stmt = text(
+            f"""
+            SELECT id, document_id, chunk_index, content, metadata, embedding, created_at
+            FROM document_chunks
+            WHERE document_id = ANY(:doc_ids)
+            ORDER BY embedding <=> CAST(:qvec AS {vec_schema}.vector)
+            LIMIT :limit
+            """
+        )
+        result = await db.execute(
+            stmt,
+            {"doc_ids": resolved_ids, "qvec": qvec_str, "limit": top_k},
+        )
+        rows_data = result.mappings().all()
+
+        context_chunks = [
+            ChunkResponse(
+                id=row["id"],
+                document_id=row["document_id"],
+                chunk_index=row["chunk_index"],
+                content=row["content"],
+                metadata=row["metadata"] or {},
+            )
+            for row in rows_data
+        ]
+
+        context_text = "\n\n---\n\n".join(
+            f"[Doc {c.document_id} | Chunk {c.chunk_index}]\n{c.content}"
+            for c in context_chunks
+        )
+
+        return RetrieveResult(context_text=context_text, context_chunks=context_chunks)

@@ -15,6 +15,7 @@ from app.core.config import get_settings
 from app.documents.router import router as documents_router
 from app.chat.router import router as chat_router
 from app.processing.router import router as processing_router
+from app.folders.router import router as folders_router
 
 load_dotenv()
 
@@ -99,6 +100,9 @@ app.include_router(chat_router, prefix="/api")
 
 # Processing router (RAG: chunking, embeddings, query)
 app.include_router(processing_router, prefix="/api")
+
+# Folders router (organize documents by task)
+app.include_router(folders_router, prefix="/api")
 
 # --- 5. Data Models (Legacy/Auth) ---
 

@@ -50,3 +50,8 @@ postgres_data/
 .vscode/
 .idea/
 .cursor/
+
+# Claude / Agents
+.claude/
+.agents/
+CLAUDE.md

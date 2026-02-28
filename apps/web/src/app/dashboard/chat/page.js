@@ -8,7 +8,7 @@ import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.min.css";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 
 export default function ChatPage() {
   // --- State: Data ---
@@ -278,7 +278,7 @@ export default function ChatPage() {
                 const payload = JSON.parse(data);
                 const { conversation_id, message: finalMsg } = payload;
 
-                // Replace streaming placeholder with final DB-backed message
+                  // Replace streaming placeholder with final DB-backed message (include sources if RAG was used)
                 setMessages((prev) => {
                   const updated = [...prev];
                   updated[updated.length - 1] = {
@@ -286,6 +286,7 @@ export default function ChatPage() {
                     role: "assistant",
                     content: finalMsg.content,
                     created_at: finalMsg.created_at,
+                    sources: finalMsg.sources || [],
                   };
                   return updated;
                 });
@@ -684,14 +685,28 @@ export default function ChatPage() {
                             {m.content}
                           </p>
                         ) : (
-                          <div className="chat-markdown [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-3 [&_h1]:mb-2 [&_h1:first-child]:mt-0 [&_h2]:text-base [&_h2]:font-bold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_pre]:bg-slate-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:overflow-x-auto [&_pre]:my-2 [&_pre]:text-xs [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:my-2 [&_blockquote]:text-slate-600 [&_hr]:my-3 [&_hr]:border-slate-200 [&_a]:text-indigo-600 [&_a]:underline [&_a]:break-all [&_table]:w-full [&_table]:my-2 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-slate-300 [&_td]:px-2 [&_td]:py-1">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeHighlight]}
-                            >
-                              {m.content}
-                            </ReactMarkdown>
-                          </div>
+                          <>
+                            <div className="chat-markdown [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-3 [&_h1]:mb-2 [&_h1:first-child]:mt-0 [&_h2]:text-base [&_h2]:font-bold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_pre]:bg-slate-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:overflow-x-auto [&_pre]:my-2 [&_pre]:text-xs [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:my-2 [&_blockquote]:text-slate-600 [&_hr]:my-3 [&_hr]:border-slate-200 [&_a]:text-indigo-600 [&_a]:underline [&_a]:break-all [&_table]:w-full [&_table]:my-2 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-slate-300 [&_td]:px-2 [&_td]:py-1">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeHighlight]}
+                              >
+                                {m.content}
+                              </ReactMarkdown>
+                            </div>
+                            {/* Sources badge — shown when RAG tool was called */}
+                            {m.sources && m.sources.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-1.5 flex-wrap">
+                                <svg className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                                </svg>
+                                <span className="text-xs text-slate-400 font-medium">From your documents</span>
+                                <span className="text-xs text-indigo-500 font-semibold">
+                                  {[...new Set(m.sources.map((s) => s.document_id))].length} source{[...new Set(m.sources.map((s) => s.document_id))].length !== 1 ? "s" : ""}
+                                </span>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -750,14 +765,18 @@ export default function ChatPage() {
                 +
               </button>
               {menuOpen && (
-                <div className="absolute bottom-[48px] left-0 w-52 rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden z-10">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full px-4 py-3 text-left hover:bg-slate-50 text-sm font-semibold text-slate-700"
-                  >
-                    Add files (Coming Soon)
-                  </button>
+                <div className="absolute bottom-[48px] left-0 w-64 rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden z-10">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-indigo-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                      </svg>
+                      Documents auto-search enabled
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Your uploaded files are automatically searched when you ask about your notes or study materials.
+                    </p>
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"

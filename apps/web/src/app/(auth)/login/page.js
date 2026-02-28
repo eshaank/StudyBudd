@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
 
-console.log("SUPABASE URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +34,7 @@ export default function LoginPage() {
         if (!isMounted) return;
 
         if (user) {
-          router.replace("/"); // or "/dashboard" later
+          router.replace(redirectTo);
           return;
         }
       } catch {
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      router.push("/"); // later: /dashboard
+      router.push(redirectTo);
     } catch (err) {
       setError(err?.message || "Login failed. Please try again.");
     } finally {

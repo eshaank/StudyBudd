@@ -1,261 +1,252 @@
+"""Chat service: conversation management and LLM streaming via Pydantic AI agent."""
+
+from __future__ import annotations
+
+import asyncio
 import json
 import logging
-import os
-from typing import AsyncGenerator
-from supabase import Client, create_client
+from collections.abc import AsyncGenerator
+from datetime import datetime
+from uuid import UUID
+
+from fastapi import HTTPException
+from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.chat.agent import ChatDeps, get_study_agent
+from app.chat.schemas import ChatRequest, ChatResponse, MessageResponse
+from app.core.supabase import get_supabase_client
 
 logger = logging.getLogger(__name__)
-from .schemas import ChatRequest, ChatResponse, MessageResponse
-from fastapi import HTTPException
-from datetime import datetime
-from dotenv import load_dotenv
 
-# Load env
-load_dotenv()
-
-# --- Supabase Setup ---
-url = os.environ.get("SUPABASE_URL")
-key = (
-    os.environ.get("SUPABASE_SERVICE_KEY") or
-    os.environ.get("SUPABASE_KEY") or
-    os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-)
-
-if not url or not key:
-    logger.error("Supabase URL or KEY is missing in chat/service.py")
-else:
-    logger.info("Supabase connected")
-
-supabase: Client = create_client(url, key)
-
-# --- LLM Client (lazy init) ---
-_llm = None
-
-def _get_llm():
-    global _llm
-    if _llm is None:
-        from app.inference.client import get_llm_client
-        _llm = get_llm_client()
-    return _llm
-
-# Max history messages to include for context (to stay within token limits)
 MAX_HISTORY_MESSAGES = 20
 
 
-class ChatService:
-    """
-    Service class handling core chat logic and database interactions.
-    """
+def _history_to_model_messages(history: list[dict]) -> list[ModelRequest | ModelResponse]:
+    """Convert Supabase message rows to Pydantic AI message history format."""
+    messages: list[ModelRequest | ModelResponse] = []
+    for msg in history:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+        if role == "user":
+            messages.append(ModelRequest(parts=[UserPromptPart(content)]))
+        elif role == "assistant":
+            messages.append(ModelResponse(parts=[TextPart(content)]))
+    return messages
 
-    async def create_conversation(self, user_id: str, title: str = "New Chat"):
-        """Creates a new conversation entry in the database."""
-        data = {
-            "user_id": user_id,
-            "title": title
-        }
-        res = supabase.table("conversations").insert(data).execute()
+
+class ChatService:
+    """Service class handling core chat logic and database interactions."""
+
+    async def create_conversation(self, user_id: str, title: str = "New Chat") -> dict:
+        """Create a new conversation entry in the database."""
+        data = {"user_id": user_id, "title": title}
+        supabase = get_supabase_client()
+        res = await asyncio.to_thread(
+            supabase.table("conversations").insert(data).execute
+        )
         conv = res.data[0]
         logger.info("conversation created user_id=%s conversation_id=%s", user_id, conv["id"])
         return conv
 
-    async def get_history(self, conversation_id: str, user_id: str):
-        """Fetches message history for a specific conversation.
-
-        Verifies the conversation belongs to the requesting user before
-        returning messages.
-        """
-        # Ownership check: ensure the conversation belongs to this user
-        conv_res = supabase.table("conversations")\
-            .select("id")\
-            .eq("id", conversation_id)\
-            .eq("user_id", user_id)\
-            .execute()
-
+    async def get_history(self, conversation_id: str, user_id: str) -> list[dict]:
+        """Fetch message history for a conversation, verifying ownership."""
+        supabase = get_supabase_client()
+        conv_res = await asyncio.to_thread(
+            supabase.table("conversations")
+            .select("id")
+            .eq("id", conversation_id)
+            .eq("user_id", user_id)
+            .execute
+        )
         if not conv_res.data:
-            raise HTTPException(
-                status_code=404,
-                detail="Conversation not found",
-            )
+            raise HTTPException(status_code=404, detail="Conversation not found")
 
-        res = supabase.table("messages")\
-            .select("*")\
-            .eq("conversation_id", conversation_id)\
-            .order("created_at")\
-            .execute()
+        res = await asyncio.to_thread(
+            supabase.table("messages")
+            .select("*")
+            .eq("conversation_id", conversation_id)
+            .order("created_at")
+            .execute
+        )
         return res.data
 
-    def _build_history(self, conversation_id: str) -> list[dict]:
-        """
-        Fetch recent messages and convert to the format expected by the LLM:
-        [{"role": "user"|"assistant", "content": "..."}]
-        """
-        res = supabase.table("messages")\
-            .select("role, content")\
-            .eq("conversation_id", conversation_id)\
-            .order("created_at")\
-            .limit(MAX_HISTORY_MESSAGES)\
-            .execute()
-
-        return [
-            {"role": msg["role"], "content": msg["content"]}
-            for msg in res.data
-        ]
+    async def _build_history(self, conversation_id: str) -> list[dict]:
+        """Fetch recent messages as plain dicts (role + content)."""
+        supabase = get_supabase_client()
+        res = await asyncio.to_thread(
+            supabase.table("messages")
+            .select("role, content")
+            .eq("conversation_id", conversation_id)
+            .order("created_at")
+            .limit(MAX_HISTORY_MESSAGES)
+            .execute
+        )
+        return [{"role": m["role"], "content": m["content"]} for m in res.data]
 
     async def process_chat(self, user_id: str, request: ChatRequest) -> ChatResponse:
-        """
-        Main logic pipeline:
-        1. Create conversation if needed.
-        2. Save user message.
-        3. Fetch conversation history for context.
-        4. Call Together AI for a response.
-        5. Save AI message.
-        """
+        """Non-streaming chat — delegates to the streaming path and collects tokens."""
         conversation_id = request.conversation_id
 
-        # 1. If no conversation_id is provided, start a new one
         if not conversation_id:
-            new_conv = await self.create_conversation(
-                user_id, title=request.message[:50]
-            )
-            conversation_id = new_conv['id']
+            new_conv = await self.create_conversation(user_id, title=request.message[:50])
+            conversation_id = new_conv["id"]
 
-        # 2. Save User message
         user_msg_data = {
             "conversation_id": conversation_id,
             "role": "user",
-            "content": request.message
+            "content": request.message,
         }
-        supabase.table("messages").insert(user_msg_data).execute()
+        supabase = get_supabase_client()
+        await asyncio.to_thread(supabase.table("messages").insert(user_msg_data).execute)
 
-        # 3. Build conversation history (all saved messages so far, including the one we just inserted)
-        history = self._build_history(conversation_id)
-
-        # 4. Call Together AI
-        #    We pass history WITHOUT the latest user msg, because the client appends it.
-        #    History already includes the user message we just saved, so pop it off.
+        history = await self._build_history(conversation_id)
         history_without_latest = history[:-1] if history else []
 
+        from app.inference.client import get_llm_client
+        llm = get_llm_client()
+        chunks: list[str] = []
         try:
-            llm = _get_llm()
-            logger.debug("LLM chat started conversation_id=%s history_len=%d", conversation_id, len(history_without_latest))
-            chunks: list[str] = []
             async for token in llm.chat(
                 user_message=request.message,
                 conversation_history=history_without_latest,
             ):
                 chunks.append(token)
             ai_response_text = "".join(chunks)
-            logger.debug("LLM chat completed conversation_id=%s response_len=%d", conversation_id, len(ai_response_text))
         except Exception as e:
             logger.exception("LLM Error: %s", e)
             ai_response_text = "Sorry, I'm having trouble generating a response right now. Please try again."
 
-        sources = []
-
-        # 5. Save AI message
         ai_msg_data = {
             "conversation_id": conversation_id,
             "role": "assistant",
             "content": ai_response_text,
-            "sources": sources
+            "sources": [],
         }
-        ai_res = supabase.table("messages").insert(ai_msg_data).execute()
+        ai_res = await asyncio.to_thread(supabase.table("messages").insert(ai_msg_data).execute)
         ai_msg_record = ai_res.data[0]
 
-        # 6. Update conversation timestamp
-        supabase.table("conversations")\
-            .update({"updated_at": datetime.utcnow().isoformat()})\
-            .eq("id", conversation_id)\
-            .execute()
+        await asyncio.to_thread(
+            supabase.table("conversations")
+            .update({"updated_at": datetime.utcnow().isoformat()})
+            .eq("id", conversation_id)
+            .execute
+        )
 
         return ChatResponse(
             conversation_id=conversation_id,
             message=MessageResponse(
-                id=ai_msg_record['id'],
+                id=ai_msg_record["id"],
                 role="assistant",
-                content=ai_msg_record['content'],
-                created_at=datetime.fromisoformat(ai_msg_record['created_at']),
-                sources=sources
-            )
+                content=ai_msg_record["content"],
+                created_at=datetime.fromisoformat(ai_msg_record["created_at"]),
+                sources=[],
+            ),
         )
 
     async def process_chat_stream(
-        self, user_id: str, request: ChatRequest
+        self,
+        user_id: str,
+        request: ChatRequest,
+        db: AsyncSession,
     ) -> AsyncGenerator[str, None]:
-        """
-        Streaming version of process_chat.
+        """Streaming chat via the Pydantic AI agent (with RAG tool).
 
         Yields SSE-formatted events:
-          - 'event: token\\ndata: <chunk>\\n\\n'  for each LLM token
-          - 'event: done\\ndata: {json}\\n\\n'     once with final metadata
-
-        The full response is accumulated and saved to the DB after
-        the stream finishes.
+          - ``event: token\\ndata: <chunk>\\n\\n``  for each text token
+          - ``event: done\\ndata: {json}\\n\\n``     once with final metadata + sources
         """
         conversation_id = request.conversation_id
 
         # 1. Create conversation if needed
         if not conversation_id:
-            new_conv = await self.create_conversation(
-                user_id, title=request.message[:50]
-            )
+            new_conv = await self.create_conversation(user_id, title=request.message[:50])
             conversation_id = new_conv["id"]
 
         # 2. Save user message
-        user_msg_data = {
-            "conversation_id": conversation_id,
-            "role": "user",
-            "content": request.message,
-        }
-        supabase.table("messages").insert(user_msg_data).execute()
+        _supabase = get_supabase_client()
+        await asyncio.to_thread(
+            _supabase.table("messages")
+            .insert(
+                {
+                    "conversation_id": conversation_id,
+                    "role": "user",
+                    "content": request.message,
+                }
+            )
+            .execute
+        )
 
-        # 3. Build history (pop latest user msg; the LLM client re-appends it)
-        history = self._build_history(conversation_id)
-        history_without_latest = history[:-1] if history else []
+        # 3. Build history for the agent (excluding the message we just saved)
+        raw_history = await self._build_history(conversation_id)
+        history_without_latest = raw_history[:-1] if raw_history else []
+        message_history = _history_to_model_messages(history_without_latest)
 
-        # 4. Stream tokens from the LLM
+        # 4. Build agent deps
+        deps = ChatDeps(
+            user_id=UUID(user_id),
+            db=db,
+            folder_ids=None,  # search all docs by default
+        )
+
+        # 5. Stream via Pydantic AI agent
         accumulated_text = ""
-        logger.debug("chat stream LLM started conversation_id=%s", conversation_id)
+        agent = get_study_agent()
+        logger.debug("agent stream started conversation_id=%s user_id=%s", conversation_id, user_id)
+
         try:
-            llm = _get_llm()
-            async for token in llm.chat(
-                user_message=request.message,
-                conversation_history=history_without_latest,
-            ):
-                accumulated_text += token
-                yield f"event: token\ndata: {token}\n\n"
+            async with agent.run_stream(
+                request.message,
+                deps=deps,
+                message_history=message_history,
+            ) as result:
+                async for chunk in result.stream_text(delta=True):
+                    accumulated_text += chunk
+                    yield f"event: token\ndata: {chunk}\n\n"
         except Exception as e:
-            logger.exception("LLM Stream Error: %s", e)
+            logger.exception("Agent stream error: %s", e)
             fallback = "Sorry, I'm having trouble generating a response right now. Please try again."
             accumulated_text = fallback
             yield f"event: token\ndata: {fallback}\n\n"
 
-        logger.debug("chat stream LLM completed conversation_id=%s response_len=%d", conversation_id, len(accumulated_text))
+        logger.debug(
+            "agent stream completed conversation_id=%s response_len=%d sources=%d",
+            conversation_id,
+            len(accumulated_text),
+            len(deps.sources),
+        )
 
-        # 5. Save the complete AI message to DB
+        # 6. Save complete AI message (with sources if the RAG tool was called)
         ai_msg_data = {
             "conversation_id": conversation_id,
             "role": "assistant",
             "content": accumulated_text,
-            "sources": [],
+            "sources": deps.sources,
         }
-        ai_res = supabase.table("messages").insert(ai_msg_data).execute()
+        ai_res = await asyncio.to_thread(
+            _supabase.table("messages").insert(ai_msg_data).execute
+        )
         ai_msg_record = ai_res.data[0]
 
-        # 6. Update conversation timestamp
-        supabase.table("conversations") \
-            .update({"updated_at": datetime.utcnow().isoformat()}) \
-            .eq("id", conversation_id) \
-            .execute()
+        # 7. Update conversation timestamp
+        await asyncio.to_thread(
+            _supabase.table("conversations")
+            .update({"updated_at": datetime.utcnow().isoformat()})
+            .eq("id", conversation_id)
+            .execute
+        )
 
-        # 7. Yield final metadata event
-        done_payload = json.dumps({
-            "conversation_id": conversation_id,
-            "message": {
-                "id": ai_msg_record["id"],
-                "role": "assistant",
-                "content": ai_msg_record["content"],
-                "created_at": ai_msg_record["created_at"],
-            },
-        })
+        # 8. Emit done event with final metadata + sources
+        done_payload = json.dumps(
+            {
+                "conversation_id": conversation_id,
+                "message": {
+                    "id": ai_msg_record["id"],
+                    "role": "assistant",
+                    "content": ai_msg_record["content"],
+                    "created_at": ai_msg_record["created_at"],
+                    "sources": deps.sources,
+                },
+            }
+        )
         yield f"event: done\ndata: {done_payload}\n\n"

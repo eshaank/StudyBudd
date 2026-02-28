@@ -27,7 +27,7 @@ export default function AvatarUploader() {
         .from("profiles")
         .select("*")
         .eq("id", u.id)
-        .single();
+        .maybeSingle();
 
       if (error) return;
 
