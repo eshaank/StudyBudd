@@ -47,7 +47,7 @@ web:
 
 # Run API dev server locally (without Docker)
 api:
-    cd apps/api && uv run uvicorn app.main:app --reload
+    cd apps/api && . .venv/bin/activate && uv run uvicorn app.main:app --reload
 
 # =============================================================================
 # Database

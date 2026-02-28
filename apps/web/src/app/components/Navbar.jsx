@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowser } from "../../lib/supabase/client";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -126,7 +127,11 @@ export default function Navbar() {
             )}
 
             {/* Right side */}
-            <div className="flex items-center gap-2" ref={menuRef}>
+            <div className="flex items-center gap-2">
+              {/* Notification bell — only when logged in */}
+              {!loading && user && <NotificationBell />}
+
+              <div ref={menuRef}>
               {loading ? (
                 <span className="text-white/70 text-sm px-3">...</span>
               ) : user ? (
@@ -231,6 +236,7 @@ export default function Navbar() {
                   </Link>
                 </>
               )}
+              </div>
             </div>
           </div>
 

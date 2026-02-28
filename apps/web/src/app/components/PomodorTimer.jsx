@@ -1,6 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { usePomodoro } from "./PomodoroProvider";
+
+const ChevronIcon = ({ className }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+);
 
 export default function PomodoroTimer() {
   const {
@@ -15,13 +22,10 @@ export default function PomodoroTimer() {
     cycleCount,
     mm,
     ss,
-    ringPercent,
-
     setStudyMinutes,
     setShortBreakMinutes,
     setLongBreakMinutes,
     setLongBreakEvery,
-
     start,
     pause,
     resetTimer,
@@ -30,149 +34,169 @@ export default function PomodoroTimer() {
     pad2,
   } = usePomodoro();
 
+  const [showEditTimes, setShowEditTimes] = useState(false);
+
   const label = hydrated ? modeLabel : "Loading...";
 
+  const accentColor =
+    mode === "focus"
+      ? "text-indigo-600"
+      : mode === "shortBreak"
+      ? "text-emerald-600"
+      : "text-blue-600";
+
   return (
-    <div className="w-full">
-      <div className="rounded-2xl bg-white shadow-xl border border-slate-100 p-5 sm:p-6">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm text-slate-500">Mode</p>
-            <h3 className="text-xl font-extrabold text-slate-900 truncate">{label}</h3>
-            <p className="text-sm text-slate-500 mt-1">
-              Completed focus sessions:{" "}
-              <span className="font-semibold text-slate-900">{cycleCount}</span>
-            </p>
-          </div>
-
-          <div className="text-right shrink-0">
-            <p className="text-sm text-slate-500">Progress</p>
-            <p className="text-lg font-extrabold text-slate-900">{ringPercent}%</p>
-          </div>
+    <div className="w-full space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+            Pomodoro
+          </p>
+          <p className="text-sm font-bold text-slate-700 mt-0.5">{label}</p>
         </div>
+        <span className="text-xs text-slate-400">
+          {cycleCount} {cycleCount === 1 ? "session" : "sessions"}
+        </span>
+      </div>
 
-        {/* Mode segmented control */}
-        <div className="mt-4 grid grid-cols-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
-          <Seg active={mode === "focus"} onClick={() => switchMode("focus")}>
-            Focus
-          </Seg>
-          <Seg active={mode === "shortBreak"} onClick={() => switchMode("shortBreak")}>
-            Short
-          </Seg>
-          <Seg active={mode === "longBreak"} onClick={() => switchMode("longBreak")}>
-            Long
-          </Seg>
+      {/* Timer display */}
+      <div className="flex items-center justify-center py-4">
+        <div className={`text-6xl font-extrabold tabular-nums ${accentColor}`}>
+          {pad2(mm)}:{pad2(ss)}
         </div>
+      </div>
 
-        {/* Timer */}
-        <div className="mt-6 flex items-center justify-center">
-          <div className="relative w-48 h-48 rounded-full border-8 border-slate-200 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full border-8 border-indigo-500/30" />
-            <div className="text-center">
-              <div className="text-5xl font-extrabold text-slate-900 tabular-nums">
-                {pad2(mm)}:{pad2(ss)}
-              </div>
-              <div className="text-sm text-slate-500 mt-1">
-                {isRunning ? "Running" : "Paused"}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Mode tabs */}
+      <div className="grid grid-cols-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <ModeBtn
+          active={mode === "focus"}
+          activeClass="bg-indigo-600 text-white"
+          onClick={() => switchMode("focus")}
+        >
+          Focus
+        </ModeBtn>
+        <ModeBtn
+          active={mode === "shortBreak"}
+          activeClass="bg-emerald-600 text-white"
+          onClick={() => switchMode("shortBreak")}
+        >
+          Short
+        </ModeBtn>
+        <ModeBtn
+          active={mode === "longBreak"}
+          activeClass="bg-blue-600 text-white"
+          onClick={() => switchMode("longBreak")}
+        >
+          Long
+        </ModeBtn>
+      </div>
 
-        {/* Actions */}
-        <div className="mt-6 flex flex-wrap gap-2">
-          {!isRunning ? (
-            <button
-              onClick={start}
-              className="flex-1 min-w-[120px] rounded-xl bg-indigo-600 px-4 py-3 text-white font-bold hover:bg-indigo-700
-                focus:outline-none focus:ring-2 focus:ring-indigo-200"
-              type="button"
-            >
-              Start
-            </button>
-          ) : (
-            <button
-              onClick={pause}
-              className="flex-1 min-w-[120px] rounded-xl bg-slate-900 px-4 py-3 text-white font-bold hover:bg-slate-800
-                focus:outline-none focus:ring-2 focus:ring-slate-300"
-              type="button"
-            >
-              Pause
-            </button>
-          )}
-
+      {/* Actions */}
+      <div className="flex gap-2">
+        {!isRunning ? (
           <button
-            onClick={resetTimer}
-            className="flex-1 min-w-[120px] rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 font-bold hover:bg-slate-50
-              focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            onClick={start}
+            className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition"
             type="button"
           >
-            Reset
+            Start
           </button>
-
+        ) : (
           <button
-            onClick={resetAll}
-            className="flex-1 min-w-[120px] rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 font-bold hover:bg-slate-50
-              focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            onClick={pause}
+            className="flex-1 rounded-xl bg-slate-800 py-2.5 text-sm font-bold text-white hover:bg-slate-700 transition"
             type="button"
           >
-            Reset All
+            Pause
           </button>
-        </div>
+        )}
+        <button
+          onClick={resetTimer}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+          type="button"
+        >
+          Reset
+        </button>
+        <button
+          onClick={resetAll}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+          type="button"
+        >
+          Reset All
+        </button>
+      </div>
 
-        {/* Settings */}
-        <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Setting
-            label="Study (min)"
-            value={studyMinutes}
-            min={1}
-            max={180}
-            onChange={setStudyMinutes}
-            disabled={isRunning}
+      {/* Edit times collapsible */}
+      <div className="border-t border-slate-100 pt-3">
+        <button
+          onClick={() => setShowEditTimes((v) => !v)}
+          className="flex w-full items-center justify-between text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+          type="button"
+        >
+          <span>Edit Times</span>
+          <ChevronIcon
+            className={`w-4 h-4 transition-transform duration-200 ${
+              showEditTimes ? "rotate-180" : ""
+            }`}
           />
-          <Setting
-            label="Short break (min)"
-            value={shortBreakMinutes}
-            min={1}
-            max={60}
-            onChange={setShortBreakMinutes}
-            disabled={isRunning}
-          />
-          <Setting
-            label="Long break (min)"
-            value={longBreakMinutes}
-            min={1}
-            max={90}
-            onChange={setLongBreakMinutes}
-            disabled={isRunning}
-          />
-          <Setting
-            label="Long break every"
-            value={longBreakEvery}
-            min={2}
-            max={10}
-            onChange={setLongBreakEvery}
-            disabled={isRunning}
-            suffix="sessions"
-          />
-        </div>
+        </button>
 
-        <p className="mt-4 text-xs text-slate-500">
-          Tip: You can edit durations while paused. Editing is locked while running.
-        </p>
+        {showEditTimes && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <TimeInput
+              label="Focus"
+              suffix="min"
+              value={studyMinutes}
+              min={1}
+              max={180}
+              disabled={isRunning}
+              onChange={setStudyMinutes}
+            />
+            <TimeInput
+              label="Short break"
+              suffix="min"
+              value={shortBreakMinutes}
+              min={1}
+              max={60}
+              disabled={isRunning}
+              onChange={setShortBreakMinutes}
+            />
+            <TimeInput
+              label="Long break"
+              suffix="min"
+              value={longBreakMinutes}
+              min={1}
+              max={90}
+              disabled={isRunning}
+              onChange={setLongBreakMinutes}
+            />
+            <TimeInput
+              label="Every"
+              suffix="sessions"
+              value={longBreakEvery}
+              min={2}
+              max={10}
+              disabled={isRunning}
+              onChange={setLongBreakEvery}
+            />
+          </div>
+        )}
+        {isRunning && showEditTimes && (
+          <p className="mt-2 text-[11px] text-slate-400">Pause timer to edit times.</p>
+        )}
       </div>
     </div>
   );
 }
 
-function Seg({ active, onClick, children }) {
+function ModeBtn({ active, activeClass, onClick, children }) {
   return (
     <button
       onClick={onClick}
       className={[
-        "px-3 py-2 text-sm font-extrabold transition",
-        active ? "bg-indigo-600 text-white" : "bg-white text-slate-700 hover:bg-slate-50",
+        "py-2 text-sm font-bold transition",
+        active ? activeClass : "bg-white text-slate-600 hover:bg-slate-50",
       ].join(" ")}
       type="button"
     >
@@ -181,14 +205,10 @@ function Seg({ active, onClick, children }) {
   );
 }
 
-function Setting({ label, value, onChange, min, max, disabled, suffix }) {
+function TimeInput({ label, suffix, value, onChange, min, max, disabled }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-800">{label}</p>
-        {suffix ? <span className="text-xs text-slate-500">{suffix}</span> : null}
-      </div>
-
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="text-xs font-bold text-slate-500">{label}</div>
       <input
         type="number"
         min={min}
@@ -196,9 +216,9 @@ function Setting({ label, value, onChange, min, max, disabled, suffix }) {
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900
-          focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60"
+        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
       />
+      <div className="text-[10px] text-slate-400 mt-1">{suffix}</div>
     </div>
   );
 }

@@ -18,81 +18,84 @@ export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // hydration guard (localStorage/store can mismatch SSR)
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   return (
     <PomodoroProvider>
-      <div className="min-h-screen relative bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100">
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl" />
-        <div className="pointer-events-none absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-blue-300/30 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl" />
+        <div className="min-h-screen relative bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100">
+          {/* Decorative blobs */}
+          <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl" />
+          <div className="pointer-events-none absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-blue-300/30 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl" />
 
-        <div className="relative z-10 w-full max-w-none px-4 sm:px-6 lg:px-10 xl:px-14 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6 w-full min-w-0">
-            {/* Sidebar */}
-            <aside
-              className={`${
-                open ? "block" : "hidden"
-              } lg:block rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 h-fit`}
-            >
-              <div className="sticky top-6 space-y-4">
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">NAVIGATION</p>
-                </div>
-
-                <nav className="space-y-2">
-                  {NAV.map((item) => {
-                    const active = pathname?.startsWith(item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`group block rounded-2xl border px-4 py-3 transition ${
-                          active
-                            ? "bg-indigo-600 border-indigo-600 text-white shadow-lg"
-                            : "bg-white border-slate-200 hover:bg-slate-50 text-slate-900"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{item.icon}</span>
-                            <div>
-                              <p className="font-bold">{item.label}</p>
-                              <p className={`text-xs ${active ? "text-white/80" : "text-slate-500"}`}>
-                                {item.desc}
-                              </p>
-                            </div>
-                          </div>
-                          <span className={`${active ? "text-white/90" : "text-slate-400"} font-bold`}>
-                            →
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </nav>
-
-                {/* Pomodoro */}
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-extrabold text-slate-900">Pomodoro</div>
-                    <div className="text-xs font-semibold text-slate-500">Focus</div>
+          <div className="relative z-10 w-full max-w-none px-4 sm:px-6 lg:px-10 xl:px-14 py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6 w-full min-w-0">
+              {/* Sidebar */}
+              <aside
+                className={`${
+                  open ? "block" : "hidden"
+                } lg:block rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 h-fit`}
+              >
+                <div className="sticky top-6 space-y-4">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500">NAVIGATION</p>
                   </div>
+
+                  <nav className="space-y-2">
+                    {NAV.map((item) => {
+                      const active = pathname?.startsWith(item.href);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`group block rounded-2xl border px-4 py-3 transition ${
+                            active
+                              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg"
+                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg">{item.icon}</span>
+                              <div>
+                                <p className="font-bold">{item.label}</p>
+                                <p
+                                  className={`text-xs ${
+                                    active ? "text-white/80" : "text-slate-500"
+                                  }`}
+                                >
+                                  {item.desc}
+                                </p>
+                              </div>
+                            </div>
+                            <span
+                              className={`${
+                                active ? "text-white/90" : "text-slate-400"
+                              } font-bold`}
+                            >
+                              →
+                            </span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </nav>
+
+                  {/* Pomodoro */}
                   {mounted ? <PomodoroSidebarCard /> : null}
                 </div>
-              </div>
-            </aside>
+              </aside>
 
-            {/* Main content: fill viewport height so chat (and similar) can pin input to bottom */}
-            <section className="min-w-0 flex flex-col min-h-[calc(100vh-6rem)] rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 sm:p-6">
-              <div className="w-full max-w-none flex-1 min-h-0 overflow-hidden">{children}</div>
-            </section>
+              {/* Main content */}
+              <section className="min-w-0 flex flex-col min-h-[calc(100vh-6rem)] rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 sm:p-6">
+                <div className="w-full max-w-none flex-1 min-h-0 overflow-hidden">
+                  {children}
+                </div>
+              </section>
+            </div>
           </div>
         </div>
-      </div>
     </PomodoroProvider>
   );
 }
