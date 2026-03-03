@@ -3,15 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
 import DocumentUpload from "../../components/DocumentUpload";
-import { useNotifications } from "../../components/NotificationsContext";
-
-const DEMO_USERS = [
-  { id: "u1", name: "User123", email: "user123@studybudd.app" },
-  { id: "u2", name: "Alice Chen", email: "alice.chen@studybudd.app" },
-  { id: "u3", name: "Bob Smith", email: "bob.smith@studybudd.app" },
-  { id: "u4", name: "Carol Davis", email: "carol.davis@studybudd.app" },
-  { id: "u5", name: "David Park", email: "david.park@studybudd.app" },
-];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -94,8 +85,6 @@ async function getAccessToken() {
 }
 
 export default function FilesPage() {
-  const { addNotification } = useNotifications();
-
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
@@ -127,8 +116,11 @@ export default function FilesPage() {
   const [shareDoc, setShareDoc] = useState(null);
   const [shareEmail, setShareEmail] = useState("");
   const [shareRecipients, setShareRecipients] = useState([]);
-  const [shareSuggestions, setShareSuggestions] = useState([]);
+  const [shareLink, setShareLink] = useState("");
+  const [shareTag, setShareTag] = useState("");
+  const [shareLoading, setShareLoading] = useState(false);
   const [copyLinkDone, setCopyLinkDone] = useState(false);
+  const [copyTagDone, setCopyTagDone] = useState(false);
   const shareInputRef = useRef(null);
 
   // Toast
@@ -211,74 +203,139 @@ export default function FilesPage() {
     }
   }, [movingDoc]);
 
-  // Share: update suggestions as user types
-  useEffect(() => {
-    const q = shareEmail.trim().toLowerCase();
-    if (!q) { setShareSuggestions([]); return; }
-    const already = shareRecipients.map((r) => r.id);
-    setShareSuggestions(
-      DEMO_USERS.filter(
-        (u) =>
-          !already.includes(u.id) &&
-          (u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
-      )
-    );
-  }, [shareEmail, shareRecipients]);
-
   function openShareModal(doc) {
     setShareDoc(doc);
     setShareEmail("");
     setShareRecipients([]);
-    setShareSuggestions([]);
+    setShareLink("");
+    setShareTag("");
     setCopyLinkDone(false);
+    setCopyTagDone(false);
   }
 
-  function addRecipient(user) {
-    setShareRecipients((prev) => [...prev, user]);
+  function addRecipient(email) {
+    setShareRecipients((prev) => [...prev, email]);
     setShareEmail("");
-    setShareSuggestions([]);
+    setShareLink("");
+    setShareTag("");
+    setCopyLinkDone(false);
+    setCopyTagDone(false);
     setTimeout(() => shareInputRef.current?.focus(), 0);
   }
 
   function addEmailAsRecipient() {
-    const email = shareEmail.trim();
+    const email = shareEmail.trim().toLowerCase();
     if (!email) return;
-    // check if already added
-    if (shareRecipients.some((r) => r.email === email)) {
-      setShareEmail(""); return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setToastMessage("Please enter a valid email address.");
+      return;
     }
-    const existing = DEMO_USERS.find((u) => u.email === email);
-    if (existing) { addRecipient(existing); return; }
-    addRecipient({ id: email, name: email.split("@")[0], email });
+
+    if (shareRecipients.includes(email)) {
+      setShareEmail("");
+      return;
+    }
+    addRecipient(email);
   }
 
-  function removeRecipient(id) {
-    setShareRecipients((prev) => prev.filter((r) => r.id !== id));
+  function removeRecipient(email) {
+    setShareRecipients((prev) => prev.filter((r) => r !== email));
+    setShareLink("");
+    setShareTag("");
+    setCopyLinkDone(false);
+    setCopyTagDone(false);
   }
 
   function handleShareEmailKeyDown(e) {
     if (e.key === "Enter") { e.preventDefault(); addEmailAsRecipient(); }
     if (e.key === "Backspace" && shareEmail === "" && shareRecipients.length > 0) {
-      removeRecipient(shareRecipients[shareRecipients.length - 1].id);
+      removeRecipient(shareRecipients[shareRecipients.length - 1]);
     }
   }
 
-  function handleCopyLink() {
-    const link = `${window.location.origin}/dashboard/files/${shareDoc?.id ?? "shared"}`;
+  async function createShareLink() {
+    if (!shareDoc) return null;
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setToastMessage("You must be logged in to share files.");
+      return null;
+    }
+
+    setShareLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/documents/${shareDoc.id}/share-links`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient_emails: shareRecipients,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const detail = Array.isArray(errData.detail)
+          ? errData.detail.map((x) => x.msg || x).join(", ")
+          : errData.detail || "Failed to create share link.";
+        setToastMessage(detail);
+        return null;
+      }
+
+      const data = await res.json();
+      const nextShareUrl = data.share_url || "";
+      const nextShareTag = data.share_token || "";
+      setShareLink(nextShareUrl);
+      setShareTag(nextShareTag);
+      return { shareUrl: nextShareUrl, shareTag: nextShareTag };
+    } catch (err) {
+      console.error("Failed to create share link:", err);
+      setToastMessage("Failed to create share link.");
+      return null;
+    } finally {
+      setShareLoading(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    let link = shareLink;
+    if (!link) {
+      const shareData = await createShareLink();
+      link = shareData?.shareUrl || "";
+    }
+    if (!link) return;
     navigator.clipboard.writeText(link).catch(() => {});
     setCopyLinkDone(true);
+    setCopyTagDone(false);
     setTimeout(() => setCopyLinkDone(false), 2500);
   }
 
-  function handleShare() {
-    if (shareRecipients.length === 0) return;
-    shareRecipients.forEach((r) => {
-      const msg = `Hey @${r.name} received the files. "${shareDoc?.original_filename || "file"}" was shared with you.`;
-      addNotification(msg);
-      alert(msg);
-    });
-    setToastMessage(`Shared with ${shareRecipients.length} person${shareRecipients.length > 1 ? "s" : ""}.`);
-    setShareDoc(null);
+  async function handleCopyTag() {
+    let tag = shareTag;
+    if (!tag) {
+      const shareData = await createShareLink();
+      tag = shareData?.shareTag || "";
+    }
+    if (!tag) return;
+    navigator.clipboard.writeText(tag).catch(() => {});
+    setCopyTagDone(true);
+    setCopyLinkDone(false);
+    setTimeout(() => setCopyTagDone(false), 2500);
+  }
+
+  async function handleShare() {
+    const shareData = await createShareLink();
+    if (!shareData?.shareUrl) return;
+    if (shareRecipients.length > 0) {
+      setToastMessage(
+        `Share link created for ${shareRecipients.length} recipient${shareRecipients.length > 1 ? "s" : ""}.`
+      );
+      return;
+    }
+    setToastMessage("Share tag created. Copy and send it to another user.");
   }
 
   // Toast auto-dismiss
@@ -969,15 +1026,15 @@ export default function FilesPage() {
                   className="flex flex-wrap items-center gap-1.5 min-h-[42px] rounded-xl border border-slate-200 bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:border-indigo-300 transition cursor-text"
                   onClick={() => shareInputRef.current?.focus()}
                 >
-                  {shareRecipients.map((r) => (
+                  {shareRecipients.map((email) => (
                     <span
-                      key={r.id}
+                      key={email}
                       className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 border border-indigo-200 pl-2 pr-1 py-0.5 text-xs font-semibold text-indigo-700"
                     >
-                      {r.email}
+                      {email}
                       <button
                         type="button"
-                        onClick={() => removeRecipient(r.id)}
+                        onClick={() => removeRecipient(email)}
                         className="ml-0.5 rounded p-0.5 hover:bg-indigo-200 text-indigo-500"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -992,36 +1049,38 @@ export default function FilesPage() {
                     value={shareEmail}
                     onChange={(e) => setShareEmail(e.target.value)}
                     onKeyDown={handleShareEmailKeyDown}
-                    placeholder={shareRecipients.length === 0 ? "Search by name or email..." : ""}
+                    placeholder={shareRecipients.length === 0 ? "Enter recipient email..." : ""}
                     className="flex-1 min-w-[140px] bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
                   />
                 </div>
 
-                {/* Suggestions dropdown */}
-                {shareSuggestions.length > 0 && (
-                  <div className="mt-1 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden divide-y divide-slate-50 z-10 relative">
-                    {shareSuggestions.map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => addRecipient(u)}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left"
-                      >
-                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[11px] font-bold text-indigo-700 shrink-0">
-                          {u.name[0].toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800">{u.name}</p>
-                          <p className="text-xs text-slate-400 truncate">{u.email}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
                 <p className="mt-1.5 text-[11px] text-slate-400">
-                  Press Enter to add. Use Backspace to remove last.
+                  Press Enter to add emails. Use Backspace to remove last.
                 </p>
+              </div>
+
+              {/* Share tag section */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Share tag
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-500 truncate select-all font-mono">
+                    {shareTag || "Create or copy to generate a share tag"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyTag}
+                    disabled={shareLoading}
+                    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                      copyTagDone
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    } disabled:opacity-60 disabled:cursor-not-allowed`}
+                  >
+                    {shareLoading ? "Loading..." : copyTagDone ? "Copied!" : "Copy"}
+                  </button>
+                </div>
               </div>
 
               {/* Copy link section */}
@@ -1031,20 +1090,19 @@ export default function FilesPage() {
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-500 truncate select-all">
-                    {typeof window !== "undefined"
-                      ? `${window.location.origin}/dashboard/files/${shareDoc.id}`
-                      : `https://studybudd.app/files/${shareDoc.id}`}
+                    {shareLink || "Create or copy to generate a secure share link"}
                   </div>
                   <button
                     type="button"
                     onClick={handleCopyLink}
+                    disabled={shareLoading}
                     className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                       copyLinkDone
                         ? "bg-emerald-600 text-white"
                         : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
+                    } disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
-                    {copyLinkDone ? "Copied!" : "Copy"}
+                    {shareLoading ? "Loading..." : copyLinkDone ? "Copied!" : "Copy"}
                   </button>
                 </div>
               </div>
@@ -1062,13 +1120,17 @@ export default function FilesPage() {
               <button
                 type="button"
                 onClick={handleShare}
-                disabled={shareRecipients.length === 0}
+                disabled={shareLoading}
                 className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
-                Share{shareRecipients.length > 0 ? ` (${shareRecipients.length})` : ""}
+                {shareLoading
+                  ? "Creating..."
+                  : shareRecipients.length > 0
+                  ? `Share (${shareRecipients.length})`
+                  : "Create share"}
               </button>
             </div>
           </div>

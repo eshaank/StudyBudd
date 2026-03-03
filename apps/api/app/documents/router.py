@@ -7,12 +7,17 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
 
 from app.core.dependencies import CurrentUser, DbSession
+from app.core.supabase import download_file
 from app.documents.schemas import (
     DocumentListResponse,
     DocumentResponse,
     DocumentUploadResponse,
+    SharedDocumentResponse,
+    ShareLinkCreateRequest,
+    ShareLinkResponse,
 )
 from app.documents.service import DocumentService
 from app.documents.text_extraction import extract_text_from_document
@@ -22,6 +27,26 @@ from app.processing.service import ProcessingService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+def _build_share_link_response(
+    share_id: UUID,
+    document_id: UUID,
+    share_token: str,
+    recipient_emails: list[str],
+    expires_at,
+    created_at,
+) -> ShareLinkResponse:
+    """Convert DB share data to API response."""
+    return ShareLinkResponse(
+        id=share_id,
+        document_id=document_id,
+        share_token=share_token,
+        share_url=DocumentService.build_share_url(share_token),
+        recipient_emails=recipient_emails,
+        expires_at=expires_at,
+        created_at=created_at,
+    )
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
@@ -95,6 +120,105 @@ async def list_documents(
     return DocumentListResponse(
         documents=[DocumentResponse.model_validate(doc) for doc in documents],
         total=len(documents),
+    )
+
+
+@router.post("/{document_id}/share-links", response_model=ShareLinkResponse)
+async def create_share_link(
+    document_id: UUID,
+    body: ShareLinkCreateRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> ShareLinkResponse:
+    """Create a shareable link for a document owned by the current user."""
+    document = await DocumentService.get_by_id(db, document_id, current_user.user_id)
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    share, recipients = await DocumentService.create_share_link(
+        db=db,
+        document=document,
+        recipient_emails=body.recipient_emails,
+        expires_in_hours=body.expires_in_hours,
+    )
+    logger.info(
+        "share link created user_id=%s document_id=%s share_id=%s",
+        current_user.user_id,
+        document_id,
+        share.id,
+    )
+    return _build_share_link_response(
+        share_id=share.id,
+        document_id=share.document_id,
+        share_token=share.share_token,
+        recipient_emails=recipients,
+        expires_at=share.expires_at,
+        created_at=share.created_at,
+    )
+
+
+@router.get("/shared/{share_token}", response_model=SharedDocumentResponse)
+async def get_shared_document(
+    share_token: str,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> SharedDocumentResponse:
+    """Resolve a share token and return shared document metadata."""
+    shared = await DocumentService.get_share_by_token(db, share_token)
+    if shared is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Share link not found",
+        )
+
+    share, document, recipients = shared
+    access_level = DocumentService.verify_share_access(
+        share=share,
+        recipient_emails=recipients,
+        current_user_id=current_user.user_id,
+        current_user_email=current_user.email,
+    )
+
+    return SharedDocumentResponse(
+        share_id=share.id,
+        access_level=access_level,
+        recipient_restricted=bool(recipients),
+        expires_at=share.expires_at,
+        document=DocumentResponse.model_validate(document),
+    )
+
+
+@router.get("/shared/{share_token}/download")
+async def download_shared_document(
+    share_token: str,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> Response:
+    """Download a shared document if access checks pass."""
+    shared = await DocumentService.get_share_by_token(db, share_token)
+    if shared is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Share link not found",
+        )
+
+    share, document, recipients = shared
+    DocumentService.verify_share_access(
+        share=share,
+        recipient_emails=recipients,
+        current_user_id=current_user.user_id,
+        current_user_email=current_user.email,
+    )
+
+    content = download_file(document.storage_path)
+    filename = document.original_filename or document.filename
+    return Response(
+        content=content,
+        media_type=document.mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

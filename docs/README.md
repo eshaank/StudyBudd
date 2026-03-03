@@ -8,6 +8,8 @@ This folder contains documentation for the StudyBudd application.
 - [Authentication](./authentication.md) - How authentication works and dev mode bypass
 - [Document Upload](./document-upload.md) - How the document upload feature works
 - [Chat Streaming](./chat-streaming.md) - How streaming works from browser to Together AI
+- [Document Sharing](./document-sharing.md) - Share links and access control flow
+- [Document Sharing (ZH)](./document-sharing-implementation-zh.md) - Detailed Chinese implementation guide
 
 ## Quick Start
 

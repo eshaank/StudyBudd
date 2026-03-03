@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class DocumentBase(BaseModel):
@@ -54,3 +54,50 @@ class DocumentListResponse(BaseModel):
 
     documents: list[DocumentResponse]
     total: int
+
+
+class ShareLinkCreateRequest(BaseModel):
+    """Request body for creating a share link."""
+
+    recipient_emails: list[str] = Field(default_factory=list)
+    expires_in_hours: int | None = Field(default=None, ge=1, le=720)
+
+    @field_validator("recipient_emails")
+    @classmethod
+    def normalize_recipient_emails(cls, value: list[str]) -> list[str]:
+        """Normalize, validate and deduplicate recipient emails."""
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw in value:
+            email = raw.strip().lower()
+            if not email:
+                continue
+            if "@" not in email:
+                raise ValueError(f"Invalid email: {raw!r}")
+            if email in seen:
+                continue
+            seen.add(email)
+            normalized.append(email)
+        return normalized
+
+
+class ShareLinkResponse(BaseModel):
+    """Response schema for a created share link."""
+
+    id: UUID
+    document_id: UUID
+    share_token: str
+    share_url: str
+    recipient_emails: list[str]
+    expires_at: datetime | None
+    created_at: datetime
+
+
+class SharedDocumentResponse(BaseModel):
+    """Response schema for resolving a share link to a document."""
+
+    share_id: UUID
+    access_level: str  # "owner" | "recipient" | "link"
+    recipient_restricted: bool
+    expires_at: datetime | None
+    document: DocumentResponse

@@ -24,6 +24,7 @@ dependencies = [
     "together>=1.0.0",
     "sentence-transformers>=2.6.0",
     "numpy>=1.26.0",
+    "pypdf>=5.0.0",
 ]
 
 [project.optional-dependencies]
