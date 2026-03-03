@@ -120,7 +120,7 @@ async def test_embed_api_success():
         patch("app.processing.service.httpx.AsyncClient", return_value=mock_client),
     ):
         mock_settings.return_value.together_api_key = "fake-key"
-        mock_settings.return_value.together_embed_model = "BAAI/bge-base-en-v1.5"
+        mock_settings.return_value.together_embed_model = "intfloat/multilingual-e5-large-instruct"
         result = await embed(["test text"])
 
     assert result == fake_vectors
@@ -143,7 +143,7 @@ async def test_embed_api_error_raises_502():
         patch("app.processing.service.httpx.AsyncClient", return_value=mock_client),
     ):
         mock_settings.return_value.together_api_key = "fake-key"
-        mock_settings.return_value.together_embed_model = "BAAI/bge-base-en-v1.5"
+        mock_settings.return_value.together_embed_model = "intfloat/multilingual-e5-large-instruct"
         with pytest.raises(HTTPException) as exc_info:
             await embed(["text"])
 
@@ -171,11 +171,69 @@ async def test_embed_dimension_mismatch_raises_500():
         patch("app.processing.service.httpx.AsyncClient", return_value=mock_client),
     ):
         mock_settings.return_value.together_api_key = "fake-key"
-        mock_settings.return_value.together_embed_model = "BAAI/bge-base-en-v1.5"
+        mock_settings.return_value.together_embed_model = "intfloat/multilingual-e5-large-instruct"
         with pytest.raises(HTTPException) as exc_info:
             await embed(["text"])
 
     assert exc_info.value.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_embed_prefix_sent_to_api():
+    """When prefix is given, embed() prepends it to each input string sent to the API."""
+    fake_vectors = [[0.1] * EMBEDDING_DIM]
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "data": [{"embedding": fake_vectors[0]}]
+    }
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with (
+        patch("app.processing.service.get_settings") as mock_settings,
+        patch("app.processing.service.httpx.AsyncClient", return_value=mock_client),
+    ):
+        mock_settings.return_value.together_api_key = "fake-key"
+        mock_settings.return_value.together_embed_model = "intfloat/multilingual-e5-large-instruct"
+        await embed(["test text"], prefix="query: ")
+
+    call_kwargs = mock_client.post.call_args
+    sent_input = call_kwargs.kwargs.get("json", call_kwargs[1].get("json", {}))["input"]
+    assert sent_input == ["query: test text"]
+
+
+@pytest.mark.asyncio
+async def test_embed_no_prefix_sends_raw():
+    """Without a prefix, embed() sends the raw strings to the API."""
+    fake_vectors = [[0.1] * EMBEDDING_DIM]
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "data": [{"embedding": fake_vectors[0]}]
+    }
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with (
+        patch("app.processing.service.get_settings") as mock_settings,
+        patch("app.processing.service.httpx.AsyncClient", return_value=mock_client),
+    ):
+        mock_settings.return_value.together_api_key = "fake-key"
+        mock_settings.return_value.together_embed_model = "intfloat/multilingual-e5-large-instruct"
+        await embed(["test text"])
+
+    call_kwargs = mock_client.post.call_args
+    sent_input = call_kwargs.kwargs.get("json", call_kwargs[1].get("json", {}))["input"]
+    assert sent_input == ["test text"]
 
 
 # =============================================================================

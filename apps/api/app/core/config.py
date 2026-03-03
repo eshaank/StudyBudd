@@ -153,7 +153,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("TOGETHER_TEMPERATURE", "together_temperature")
     )
     together_embed_model: str = Field(
-        default="BAAI/bge-base-en-v1.5",
+        default="intfloat/multilingual-e5-large-instruct",
         validation_alias=AliasChoices("TOGETHER_EMBED_MODEL", "together_embed_model")
     )
 
