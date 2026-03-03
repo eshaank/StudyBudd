@@ -23,8 +23,8 @@ from app.processing.schemas import (
     RetrieveResult,
 )
 
-# Together BAAI/bge-base-en-v1.5 outputs 768. Must match Vector(dim) in models.py.
-EMBEDDING_DIM = 768
+# intfloat/multilingual-e5-large-instruct outputs 1024. Must match Vector(dim) in models.py.
+EMBEDDING_DIM = 1024
 
 
 # ----------------------------
@@ -71,17 +71,25 @@ def _hash_to_unit_vector(s: str, dim: int = EMBEDDING_DIM) -> list[float]:
     return [v / norm for v in vec]
 
 
-async def embed(texts: list[str]) -> list[list[float]]:
-    """Generate embeddings via Together API or fallback to deterministic hash vectors."""
+async def embed(texts: list[str], *, prefix: str | None = None) -> list[list[float]]:
+    """Generate embeddings via Together API or fallback to deterministic hash vectors.
+
+    Args:
+        texts: Raw text strings to embed.
+        prefix: Optional instruction prefix for models that require it
+                (e.g. ``"query: "`` or ``"passage: "`` for E5-instruct).
+    """
+    prefixed = [f"{prefix}{t}" for t in texts] if prefix else texts
+
     settings = get_settings()
     if not settings.together_api_key:
-        return [_hash_to_unit_vector(t) for t in texts]
+        return [_hash_to_unit_vector(t) for t in prefixed]
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(
             "https://api.together.xyz/v1/embeddings",
             headers={"Authorization": f"Bearer {settings.together_api_key}"},
-            json={"model": settings.together_embed_model, "input": texts},
+            json={"model": settings.together_embed_model, "input": prefixed},
         )
         if r.status_code >= 400:
             raise HTTPException(status_code=502, detail=f"Embedding provider error: {r.text}")
@@ -147,13 +155,19 @@ async def generate_answer(question: str, context: str) -> str:
                     {
                         "role": "system",
                         "content": (
-                            "You are a helpful study assistant. Answer using ONLY the provided context. "
-                            "If the context is insufficient, say you don't have enough information."
+                            "You are a helpful study assistant. The user is asking about a specific document. "
+                            "The 'Context' below is the actual content extracted from that document (shown in chunks). "
+                            "Answer the user's question using ONLY this context. "
+                            "When they ask 'about this file' or 'about the document', describe or summarize what the context contains. "
+                            "If the context is truly empty or irrelevant to the question, say you don't have enough information."
                         ),
                     },
                     {
                         "role": "user",
-                        "content": f"Question: {question}\n\nContext:\n{context}",
+                        "content": (
+                            f"The following context is the content of the document the user is asking about.\n\n"
+                            f"Question: {question}\n\nContext:\n{context}"
+                        ),
                     },
                 ],
                 "temperature": 0.2,
@@ -218,7 +232,7 @@ class ProcessingService:
             )
 
         try:
-            vectors = await embed(chunks)
+            vectors = await embed(chunks, prefix="passage: ")
         except HTTPException:
             await db.execute(
                 update(Document)
@@ -270,7 +284,7 @@ class ProcessingService:
                 detail=f"Document status is '{doc.status}', not ready.",
             )
 
-        qvec = (await embed([question]))[0]
+        qvec = (await embed([question], prefix="query: "))[0]
         vec_schema = await _resolve_vec_schema(db)
         qvec_str = "[" + ",".join(str(x) for x in qvec) + "]"
 
@@ -370,7 +384,7 @@ class ProcessingService:
         if not resolved_ids:
             return RetrieveResult(context_text="", context_chunks=[])
 
-        qvec = (await embed([question]))[0]
+        qvec = (await embed([question], prefix="query: "))[0]
         vec_schema = await _resolve_vec_schema(db)
         qvec_str = "[" + ",".join(str(x) for x in qvec) + "]"
 
