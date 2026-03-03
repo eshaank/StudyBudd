@@ -51,7 +51,16 @@ postgres_data/
 .idea/
 .cursor/
 
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
 # Claude / Agents
 .claude/
 .agents/
 CLAUDE.md
+
