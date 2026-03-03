@@ -1,0 +1,17 @@
+{
+  "name": "study-budd",
+  "version": "1.0.0",
+  "description": "A full-stack study application with AI-powered features.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.3.2"
+  }
+}
