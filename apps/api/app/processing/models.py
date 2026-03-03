@@ -56,8 +56,8 @@ class DocumentChunk(Base):
     )  # DB column "metadata"; Python attr renamed to avoid SQLAlchemy reserved name
 
     # NOTE: choose a dimension and be consistent everywhere.
-    # Together BAAI/bge-base-en-v1.5 outputs 768. Match EMBEDDING_DIM in router.
-    embedding: Mapped[list[float]] = mapped_column(Vector(768))
+    # intfloat/multilingual-e5-large-instruct outputs 1024. Match EMBEDDING_DIM in service.py.
+    embedding: Mapped[list[float]] = mapped_column(Vector(1024))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
