@@ -8,9 +8,8 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from httpx import AsyncClient
-from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
 
-from app.chat.service import ChatService, _history_to_model_messages
+from app.chat.service import ChatService
 
 TEST_CONV_ID = "aaaaaaaa-0000-0000-0000-000000000001"
 _NOW = datetime(2024, 1, 1, tzinfo=timezone.utc)
@@ -45,8 +44,6 @@ def _make_supabase_mock(conv_data: list | None = None, msg_data: list | None = N
     msg_res = MagicMock()
     msg_res.data = msg_data if msg_data is not None else []
 
-    # Chain builder: table("conversations").insert(data).execute  and
-    # table("messages").select(...)...execute
     def _table_side_effect(table_name: str):
         tbl = MagicMock()
         tbl.select.return_value = tbl
@@ -64,57 +61,6 @@ def _make_supabase_mock(conv_data: list | None = None, msg_data: list | None = N
 
     supabase.table.side_effect = _table_side_effect
     return supabase
-
-
-# =============================================================================
-# Unit Tests: _history_to_model_messages
-# =============================================================================
-
-
-def test_history_to_model_messages_user_row():
-    """User rows are converted to ModelRequest with UserPromptPart."""
-    rows = [{"role": "user", "content": "Hello"}]
-    result = _history_to_model_messages(rows)
-    assert len(result) == 1
-    assert isinstance(result[0], ModelRequest)
-    assert isinstance(result[0].parts[0], UserPromptPart)
-    assert result[0].parts[0].content == "Hello"
-
-
-def test_history_to_model_messages_assistant_row():
-    """Assistant rows are converted to ModelResponse with TextPart."""
-    rows = [{"role": "assistant", "content": "Hi there"}]
-    result = _history_to_model_messages(rows)
-    assert len(result) == 1
-    assert isinstance(result[0], ModelResponse)
-    assert isinstance(result[0].parts[0], TextPart)
-    assert result[0].parts[0].content == "Hi there"
-
-
-def test_history_to_model_messages_mixed():
-    """Mixed history is converted preserving order."""
-    rows = [
-        {"role": "user", "content": "Q1"},
-        {"role": "assistant", "content": "A1"},
-        {"role": "user", "content": "Q2"},
-    ]
-    result = _history_to_model_messages(rows)
-    assert len(result) == 3
-    assert isinstance(result[0], ModelRequest)
-    assert isinstance(result[1], ModelResponse)
-    assert isinstance(result[2], ModelRequest)
-
-
-def test_history_to_model_messages_empty():
-    """Empty list returns empty list."""
-    assert _history_to_model_messages([]) == []
-
-
-def test_history_to_model_messages_unknown_role_ignored():
-    """Unknown roles produce no messages."""
-    rows = [{"role": "system", "content": "ignored"}]
-    result = _history_to_model_messages(rows)
-    assert result == []
 
 
 # =============================================================================
@@ -159,7 +105,7 @@ async def test_get_history_found():
 async def test_get_history_not_found_raises_404():
     """get_history raises 404 when conversation does not belong to the user."""
     service = ChatService()
-    supabase = _make_supabase_mock(conv_data=[])  # empty = not found
+    supabase = _make_supabase_mock(conv_data=[])
 
     with patch("app.chat.service.get_supabase_client", return_value=supabase):
         with pytest.raises(HTTPException) as exc_info:
@@ -176,7 +122,6 @@ async def test_get_history_not_found_raises_404():
 @pytest.mark.asyncio
 async def test_chat_post_new_conversation(client: AsyncClient):
     """POST /api/chat/ creates a new conversation and returns AI response."""
-    conv = _make_supabase_conv()
     ai_msg = _make_supabase_message(role="assistant", content="Sure!")
 
     mock_chat_response = MagicMock()
@@ -291,7 +236,7 @@ async def test_update_conversation_renames(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_update_conversation_not_found(client: AsyncClient):
     """PATCH /api/chat/conversations/{id} returns 404 when conversation not found."""
-    supabase = _make_supabase_mock(conv_data=[])  # not found
+    supabase = _make_supabase_mock(conv_data=[])
 
     with patch("app.chat.router.get_supabase_client", return_value=supabase):
         response = await client.patch(

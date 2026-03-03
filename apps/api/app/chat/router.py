@@ -31,8 +31,8 @@ async def chat(request: ChatRequest, user: CurrentUser):
 async def chat_stream(request: ChatRequest, user: CurrentUser, db: DbSession):
     """Streaming endpoint that sends tokens via Server-Sent Events.
 
-    Uses the Pydantic AI agent which can call the ``search_my_documents`` RAG
-    tool when the user asks about their uploaded files.
+    The model can call the ``search_my_documents`` RAG tool (via Together AI
+    function calling) when the user asks about their uploaded files.
     """
     user_id = str(user.user_id)
     logger.info("chat stream started user_id=%s conversation_id=%s", user_id, request.conversation_id)

@@ -9,13 +9,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
 from pydantic import BaseModel
-from supabase import create_client, Client
+from supabase import Client, create_client
 
+from app.chat.router import router as chat_router
 from app.core.config import get_settings
 from app.documents.router import router as documents_router
-from app.chat.router import router as chat_router
-from app.processing.router import router as processing_router
+from app.flashcards.router import router as flashcards_router
 from app.folders.router import router as folders_router
+from app.processing.router import router as processing_router
+from app.quizzes.router import router as quizzes_router
 
 load_dotenv()
 
@@ -103,6 +105,10 @@ app.include_router(processing_router, prefix="/api")
 
 # Folders router (organize documents by task)
 app.include_router(folders_router, prefix="/api")
+
+# Flashcards and quizzes (RAG-powered generation)
+app.include_router(flashcards_router, prefix="/api")
+app.include_router(quizzes_router, prefix="/api")
 
 # --- 5. Data Models (Legacy/Auth) ---
 

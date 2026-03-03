@@ -10,6 +10,14 @@ import { createSupabaseBrowser } from "../../../lib/supabase/client";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 
+const AVAILABLE_MODELS = [
+  { id: "Qwen/Qwen3.5-397B-A17B", name: "Qwen 3.5 397B" },
+  { id: "zai-org/GLM-5", name: "GLM-5" },
+  { id: "moonshotai/Kimi-K2.5", name: "Kimi K2.5" },
+];
+
+const DEFAULT_MODEL = "Qwen/Qwen3.5-397B-A17B";
+
 export default function ChatPage() {
   // --- State: Data ---
   const [threads, setThreads] = useState([]);
@@ -24,6 +32,18 @@ export default function ChatPage() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Model selection (persisted to localStorage)
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  useEffect(() => {
+    const stored = localStorage.getItem("chatModel");
+    if (stored && AVAILABLE_MODELS.some((m) => m.id === stored)) {
+      setSelectedModel(stored);
+    }
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("chatModel", selectedModel);
+  }, [selectedModel]);
 
   // "+" menu state
   const [menuOpen, setMenuOpen] = useState(false);
@@ -231,6 +251,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           message: text,
           conversation_id: activeId,
+          model: selectedModel,
         }),
       });
 
@@ -730,6 +751,21 @@ export default function ChatPage() {
           onSubmit={sendMessage}
           className="border-t border-slate-100 p-3 bg-white shrink-0"
         >
+          {/* Model selector */}
+          <div className="mb-2">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-indigo-200 cursor-pointer"
+            >
+              {AVAILABLE_MODELS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Attachment chips */}
           {attached.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">

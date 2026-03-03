@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.documents.models import Document as UserDocument
-from app.processing.models import Document, DocumentChunk
+from app.processing.models import ProcessingDocument, DocumentChunk
 from app.processing.schemas import (
     ChunkResponse,
     ProcessingStatusResponse,
@@ -32,6 +32,8 @@ EMBEDDING_DIM = 1024
 # ----------------------------
 def chunk_text(text: str, max_chars: int = 900, overlap: int = 150) -> list[str]:
     """Split text into overlapping chunks for embedding."""
+    # PostgreSQL UTF-8 text cannot contain null bytes (0x00); PDF extraction can produce them
+    text = text.replace("\x00", " ")
     text = re.sub(r"\s+", " ", text).strip()
     if not text:
         return []
@@ -201,15 +203,15 @@ class ProcessingService:
         meta = metadata or {}
 
         # Upsert processing_documents row
-        existing = await db.scalar(select(Document).where(Document.id == document_id))
+        existing = await db.scalar(select(ProcessingDocument).where(ProcessingDocument.id == document_id))
         if existing is None:
-            doc = Document(id=document_id, title=title, status="processing")
+            doc = ProcessingDocument(id=document_id, title=title, status="processing")
             db.add(doc)
             await db.flush()
         else:
             await db.execute(
-                update(Document)
-                .where(Document.id == document_id)
+                update(ProcessingDocument)
+                .where(ProcessingDocument.id == document_id)
                 .values(title=title, status="processing", error=None)
             )
 
@@ -219,8 +221,8 @@ class ProcessingService:
         chunks = chunk_text(text)
         if not chunks:
             await db.execute(
-                update(Document)
-                .where(Document.id == document_id)
+                update(ProcessingDocument)
+                .where(ProcessingDocument.id == document_id)
                 .values(status="error", error="No text to process.")
             )
             await db.commit()
@@ -235,8 +237,8 @@ class ProcessingService:
             vectors = await embed(chunks, prefix="passage: ")
         except HTTPException:
             await db.execute(
-                update(Document)
-                .where(Document.id == document_id)
+                update(ProcessingDocument)
+                .where(ProcessingDocument.id == document_id)
                 .values(status="error", error="Embedding failed.")
             )
             await db.commit()
@@ -254,7 +256,7 @@ class ProcessingService:
             )
 
         await db.execute(
-            update(Document).where(Document.id == document_id).values(status="ready", error=None)
+            update(ProcessingDocument).where(ProcessingDocument.id == document_id).values(status="ready", error=None)
         )
         await db.commit()
 
@@ -275,7 +277,7 @@ class ProcessingService:
         """
         Run RAG query: embed question, retrieve top-k chunks, generate answer.
         """
-        doc = await db.scalar(select(Document).where(Document.id == document_id))
+        doc = await db.scalar(select(ProcessingDocument).where(ProcessingDocument.id == document_id))
         if doc is None:
             raise HTTPException(status_code=404, detail="Document not found.")
         if doc.status != "ready":
@@ -349,34 +351,32 @@ class ProcessingService:
         if folder_ids is not None and len(folder_ids) > 0:
             rows = await db.execute(
                 select(UserDocument.id)
-                .join(Document, Document.id == UserDocument.id)
+                .join(ProcessingDocument, ProcessingDocument.id == UserDocument.id)
                 .where(
                     UserDocument.user_id == user_id,
                     UserDocument.folder_id.in_(folder_ids),
-                    Document.status == "ready",
+                    ProcessingDocument.status == "ready",
                 )
             )
             resolved_ids = [r[0] for r in rows.all()]
         elif document_ids is not None and len(document_ids) > 0:
-            # Verify ownership + ready status for the provided IDs
             rows = await db.execute(
                 select(UserDocument.id)
-                .join(Document, Document.id == UserDocument.id)
+                .join(ProcessingDocument, ProcessingDocument.id == UserDocument.id)
                 .where(
                     UserDocument.id.in_(document_ids),
                     UserDocument.user_id == user_id,
-                    Document.status == "ready",
+                    ProcessingDocument.status == "ready",
                 )
             )
             resolved_ids = [r[0] for r in rows.all()]
         else:
-            # All of the user's ready documents
             rows = await db.execute(
                 select(UserDocument.id)
-                .join(Document, Document.id == UserDocument.id)
+                .join(ProcessingDocument, ProcessingDocument.id == UserDocument.id)
                 .where(
                     UserDocument.user_id == user_id,
-                    Document.status == "ready",
+                    ProcessingDocument.status == "ready",
                 )
             )
             resolved_ids = [r[0] for r in rows.all()]

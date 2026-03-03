@@ -11,8 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.supabase import delete_file, upload_file
 from app.documents.models import Document
-from app.documents.schemas import DocumentCreate
-from app.processing.models import Document as ProcessingDocument
+from app.processing.models import ProcessingDocument
 
 logger = logging.getLogger(__name__)
 
