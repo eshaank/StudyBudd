@@ -55,6 +55,14 @@ line-length = 88
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::pydantic.warnings.PydanticDeprecatedSince212",
+    "ignore:.*:DeprecationWarning:pyiceberg",
+]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

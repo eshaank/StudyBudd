@@ -43,3 +43,10 @@ class QueryResponse(BaseModel):
     question: str
     answer: str
     context_chunks: list[ChunkResponse]
+
+
+class RetrieveResult(BaseModel):
+    """Result of multi-document retrieval (no LLM answer; used by the chat agent tool)."""
+
+    context_text: str
+    context_chunks: list[ChunkResponse]
