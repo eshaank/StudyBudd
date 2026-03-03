@@ -5,7 +5,15 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -120,7 +128,62 @@ class Document(Base, UUIDMixin, TimestampMixin):
         back_populates="documents",
         foreign_keys=[folder_id],
     )
+    shares: Mapped[list["DocumentShare"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:
         """Return string representation."""
         return f"<Document(id={self.id}, filename={self.filename}, user_id={self.user_id})>"
+
+
+class DocumentShare(Base, UUIDMixin, TimestampMixin):
+    """Share link metadata for a document."""
+
+    __tablename__ = "document_shares"
+
+    document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        index=True,
+    )
+    owner_user_id: Mapped[UUID] = mapped_column(index=True)
+    share_token: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_revoked: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+    )
+
+    document: Mapped[Document] = relationship(back_populates="shares", lazy="joined")
+    recipients: Mapped[list["DocumentShareRecipient"]] = relationship(
+        back_populates="share",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class DocumentShareRecipient(Base, UUIDMixin):
+    """Allowed recipient email for a share link."""
+
+    __tablename__ = "document_share_recipients"
+    __table_args__ = (
+        UniqueConstraint(
+            "share_id",
+            "recipient_email",
+            name="uq_document_share_recipients_share_email",
+        ),
+    )
+
+    share_id: Mapped[UUID] = mapped_column(
+        ForeignKey("document_shares.id", ondelete="CASCADE"),
+        index=True,
+    )
+    recipient_email: Mapped[str] = mapped_column(String(320), index=True)
+
+    share: Mapped[DocumentShare] = relationship(
+        back_populates="recipients",
+        lazy="joined",
+    )
