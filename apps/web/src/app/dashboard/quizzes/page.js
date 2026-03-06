@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
 import { usePomodoro } from "../../components/PomodoroProvider";
+import StudyAIPanel from "../../../components/StudyAIPanel";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -155,6 +156,8 @@ export default function QuizzesPage() {
   const [questions, setQuestions] = useState([]);
   const [quizTitle, setQuizTitle] = useState("Quiz");
   const [pageLoading, setPageLoading] = useState(true);
+
+  const [showAIPanel, setShowAIPanel] = useState(false);
 
   // Generate modal
   const [showGenerate, setShowGenerate] = useState(false);
@@ -483,7 +486,16 @@ export default function QuizzesPage() {
       `}</style>
 
       <div className="qz-root">
-        <div className="qz-wrap">
+        <div
+          style={showAIPanel ? {
+            display: "flex",
+            gap: 24,
+            alignItems: "flex-start",
+            maxWidth: 1120,
+            margin: "0 auto",
+          } : undefined}
+        >
+        <div className="qz-wrap" style={showAIPanel ? { flex: 1, minWidth: 0, margin: 0 } : undefined}>
 
           {/* Header */}
           <div className="qz-header">
@@ -515,6 +527,18 @@ export default function QuizzesPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
               <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  className="qz-tbtn"
+                  style={{
+                    padding: "6px 14px", borderRadius: 10,
+                    background: showAIPanel ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.07)",
+                    color: showAIPanel ? "#93c5fd" : "#64748b",
+                    border: showAIPanel ? "1px solid rgba(59,130,246,0.4)" : "1px solid rgba(255,255,255,0.09)",
+                  }}
+                  onClick={() => setShowAIPanel((v) => !v)}
+                >
+                  {showAIPanel ? "Hide AI" : "Ask AI"}
+                </button>
                 <button
                   className="qz-tbtn"
                   style={{ background: "linear-gradient(135deg, #2563eb, #7c3aed)", color: "#fff", padding: "6px 14px", borderRadius: 10 }}
@@ -670,6 +694,30 @@ export default function QuizzesPage() {
             </div>
           )}
 
+        </div>
+
+        {/* AI Panel */}
+        {showAIPanel && (
+          <StudyAIPanel
+            context={
+              view === "quiz" && q
+                ? {
+                    type: "quiz",
+                    question: q.question,
+                    options: q.options,
+                    quizTitle: quizTitle,
+                  }
+                : {
+                    type: "quiz",
+                    quizTitle: quizTitle,
+                    question: null,
+                  }
+            }
+            theme="dark"
+            accentColor="#3b82f6"
+            onClose={() => setShowAIPanel(false)}
+          />
+        )}
         </div>
       </div>
 

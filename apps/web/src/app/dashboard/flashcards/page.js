@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
+import StudyAIPanel from "../../../components/StudyAIPanel";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -13,13 +14,6 @@ async function getAccessToken() {
   return session?.access_token || (isDev ? "dev-token" : null);
 }
 
-const TABS = [
-  { key: "flashcards", label: "Flashcards", icon: "⬡" },
-  { key: "learn", label: "Learn", icon: "◈" },
-  { key: "test", label: "Test", icon: "◎" },
-  { key: "match", label: "Match", icon: "⬙" },
-];
-
 const PALETTE = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6"];
 
 export default function FlashcardsPage() {
@@ -27,11 +21,11 @@ export default function FlashcardsPage() {
   const [activeDeckId, setActiveDeckId] = useState(null);
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("flashcards");
   const [index, setIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
   const [folders, setFolders] = useState([]);
   const [genTitle, setGenTitle] = useState("");
@@ -195,6 +189,9 @@ export default function FlashcardsPage() {
   useEffect(() => {
     function onKeyDown(e) {
       if (showGenerate) return;
+      // Don't intercept shortcuts when typing in an input or textarea (e.g. AI panel)
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
       if (e.key === " " || e.code === "Space") { e.preventDefault(); flip(); }
       else if (e.key === "ArrowLeft") prev();
       else if (e.key === "ArrowRight") next();
@@ -247,18 +244,6 @@ export default function FlashcardsPage() {
 
         .fc-card-back { transform: rotateY(180deg); }
 
-        .fc-tab-active::after {
-          content: '';
-          position: absolute;
-          bottom: -1px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 20px;
-          height: 2px;
-          background: var(--accent);
-          border-radius: 2px;
-        }
-
         .fc-progress-fill {
           transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           background: var(--accent);
@@ -304,57 +289,47 @@ export default function FlashcardsPage() {
         }
       `}</style>
 
-      <div className="fc-root space-y-5" style={{ "--accent": accentColor }}>
+      <div className="fc-root" style={{ "--accent": accentColor }}>
 
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs font-semibold tracking-widest uppercase text-slate-400 mb-1">Study Set</p>
-              <div className="flex flex-wrap items-baseline gap-3">
-                <h1 className="fc-serif text-4xl text-slate-900 leading-none">
-                  {deck?.title ?? "Flashcards"}
-                </h1>
-                {deck?.description && (
-                  <span
-                    className="text-sm font-medium px-2.5 py-1 rounded-full"
-                    style={{ background: `color-mix(in srgb, ${accentColor} 12%, white)`, color: accentColor }}
-                  >
-                    {deck.description}
-                  </span>
-                )}
-              </div>
+        {/* Compact toolbar */}
+        <div className={`flex items-center gap-2 min-w-0 ${showAIPanel ? "mb-3" : "mb-5"}`}>
+          {/* Deck dropdown */}
+          {decks.length > 0 && (
+            <div className="relative">
+              <select
+                value={activeDeckId ?? ""}
+                onChange={(e) => setActiveDeckId(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-2 rounded-xl border text-sm font-semibold bg-white cursor-pointer focus:outline-none transition-all"
+                style={{ borderColor: accentColor, color: accentColor }}
+              >
+                {decks.map((d) => (
+                  <option key={d.id} value={d.id}>{d.title} ({d.card_count})</option>
+                ))}
+              </select>
+              <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: accentColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
+          )}
 
-            {/* Deck switcher */}
-            <div className="flex flex-wrap gap-2">
-              {decks.map((d, i) => {
-                const active = d.id === activeDeckId;
-                const color = PALETTE[i % PALETTE.length];
-                return (
-                  <button
-                    key={d.id}
-                    onClick={() => setActiveDeckId(d.id)}
-                    className="relative px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all"
-                    style={{
-                      borderColor: active ? color : "#e2e8f0",
-                      color: active ? "#fff" : "#475569",
-                      background: active ? color : "#fff",
-                    }}
-                  >
-                    {d.title}
-                    <span className="ml-1.5 text-xs opacity-70">({d.card_count})</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <div className="flex-1" />
 
           {/* Action buttons */}
           <div className="flex gap-2 shrink-0">
             <button
+              onClick={() => setShowAIPanel((v) => !v)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold border transition-all"
+              style={{
+                background: showAIPanel ? accentColor : "#fff",
+                color: showAIPanel ? "#fff" : "#475569",
+                borderColor: showAIPanel ? accentColor : "#e2e8f0",
+              }}
+            >
+              {showAIPanel ? "Hide AI" : "Ask AI"}
+            </button>
+            <button
               onClick={() => { fetchFolders(); setShowGenerate(true); }}
-              className="px-4 py-2 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
+              className="px-3 py-2 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
               style={{ background: accentColor }}
             >
               + Generate
@@ -362,39 +337,23 @@ export default function FlashcardsPage() {
             {deck && (
               <button
                 onClick={() => handleDelete(deck.id)}
-                className="px-4 py-2 rounded-xl bg-white border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-all"
+                className="px-3 py-2 rounded-xl bg-white border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-all"
               >
                 Delete
               </button>
             )}
             <Link
               href="/dashboard"
-              className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all"
             >
               ← Back
             </Link>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 border-b border-slate-200 pb-0">
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`relative px-4 py-2.5 text-sm font-semibold transition-colors rounded-t-lg ${
-                  active ? "text-slate-900 fc-tab-active" : "text-slate-500 hover:text-slate-700"
-                }`}
-                style={active ? { "--accent": accentColor } : {}}
-              >
-                <span className="mr-1.5 opacity-60">{t.icon}</span>
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Main content row: card viewer + AI panel */}
+        <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
 
         {/* Empty state */}
         {!decks.length ? (
@@ -453,26 +412,26 @@ export default function FlashcardsPage() {
             </div>
 
             {/* Card area */}
-            <div className="p-5 sm:p-8">
+            <div className={showAIPanel ? "p-4" : "p-5 sm:p-8"}>
               {!current ? (
                 <div className="h-64 flex items-center justify-center rounded-2xl border-2 border-dashed border-slate-200">
                   <p className="text-slate-400 font-medium">No cards in this deck yet.</p>
                 </div>
               ) : (
-                <div className="mx-auto max-w-3xl space-y-5">
+                <div className={`mx-auto max-w-3xl ${showAIPanel ? "space-y-3" : "space-y-5"}`}>
 
                   {/* 3-D flip card */}
                   <div className="fc-card-wrapper relative cursor-pointer" onClick={flip}>
                     <div className="fc-card-glow" style={{ "--accent": accentColor }} />
 
-                    <div className="fc-card-scene h-[340px] sm:h-[400px]">
+                    <div className={`fc-card-scene ${showAIPanel ? "h-[280px]" : "h-[340px] sm:h-[400px]"}`}>
                       <div className={`fc-card-inner h-full ${isFlipped ? "flipped" : ""}`}>
 
                         {/* Front */}
                         <div className="fc-card-face fc-card-front rounded-3xl border border-slate-200 bg-white shadow-md overflow-hidden">
                           <div className="fc-shine absolute inset-0 rounded-3xl pointer-events-none" />
                           <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${accentColor}, color-mix(in srgb, ${accentColor} 40%, transparent))` }} />
-                          <div className="h-full flex flex-col px-8 sm:px-12 pt-7 pb-8">
+                          <div className={`h-full flex flex-col ${showAIPanel ? "px-6 pt-5 pb-5" : "px-8 sm:px-12 pt-7 pb-8"}`}>
                             <div className="flex items-center justify-between">
                               <span
                                 className="text-[11px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full"
@@ -482,16 +441,18 @@ export default function FlashcardsPage() {
                               </span>
                               <span className="text-xs text-slate-400 font-medium">tap to reveal →</span>
                             </div>
-                            <div className="flex-1 flex items-center justify-center py-4">
-                              <p className="fc-serif text-center text-2xl sm:text-[2rem] leading-snug text-slate-900">
+                            <div className="flex-1 flex items-center justify-center py-3">
+                              <p className={`fc-serif text-center leading-snug text-slate-900 ${showAIPanel ? "text-xl sm:text-2xl" : "text-2xl sm:text-[2rem]"}`}>
                                 {current.front}
                               </p>
                             </div>
-                            <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400">
-                              <span><kbd className="font-mono font-bold text-slate-500">Space</kbd> to flip</span>
-                              <span className="opacity-40">·</span>
-                              <span><kbd className="font-mono font-bold text-slate-500">←→</kbd> to navigate</span>
-                            </div>
+                            {!showAIPanel && (
+                              <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400">
+                                <span><kbd className="font-mono font-bold text-slate-500">Space</kbd> to flip</span>
+                                <span className="opacity-40">·</span>
+                                <span><kbd className="font-mono font-bold text-slate-500">←→</kbd> to navigate</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -500,7 +461,7 @@ export default function FlashcardsPage() {
                           style={{ borderColor: `color-mix(in srgb, ${accentColor} 30%, transparent)`, background: `linear-gradient(145deg, color-mix(in srgb, ${accentColor} 6%, white), white)` }}
                         >
                           <div className="h-1 w-full" style={{ background: accentColor }} />
-                          <div className="h-full flex flex-col px-8 sm:px-12 pt-7 pb-8">
+                          <div className={`h-full flex flex-col ${showAIPanel ? "px-6 pt-5 pb-5" : "px-8 sm:px-12 pt-7 pb-8"}`}>
                             <div className="flex items-center justify-between">
                               <span
                                 className="text-[11px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full text-white"
@@ -512,8 +473,8 @@ export default function FlashcardsPage() {
                             </div>
 
                             {/* Answer text — shrink when sources panel is open */}
-                            <div className={`flex-1 flex items-center justify-center py-4 transition-all duration-200 ${showCardSources ? "max-h-[120px] overflow-y-auto" : ""}`}>
-                              <p className="text-center text-xl sm:text-2xl leading-relaxed text-slate-800 font-medium">
+                            <div className={`flex-1 flex items-center justify-center py-3 transition-all duration-200 ${showCardSources ? "max-h-[100px] overflow-y-auto" : ""}`}>
+                              <p className={`text-center leading-relaxed text-slate-800 font-medium ${showAIPanel ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"}`}>
                                 {current.back}
                               </p>
                             </div>
@@ -635,8 +596,26 @@ export default function FlashcardsPage() {
           </div>
         )}
 
+        </div>
+
+        {/* AI Panel */}
+        {showAIPanel && (
+          <StudyAIPanel
+            context={{
+              type: "flashcard",
+              question: current?.front,
+              answer: isFlipped ? current?.back : undefined,
+              deckTitle: deck?.title,
+            }}
+            accentColor={accentColor}
+            theme="light"
+            onClose={() => setShowAIPanel(false)}
+          />
+        )}
+        </div>
+
         {/* Footer */}
-        <div className="flex justify-between items-center text-sm pt-1">
+        <div className="flex justify-between items-center text-sm pt-3">
           <Link href="/dashboard/files" className="flex items-center gap-1.5 font-semibold text-slate-500 hover:text-slate-800 transition-colors group">
             <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 14 14"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Files
