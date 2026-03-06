@@ -88,8 +88,8 @@ export default function DashboardLayout({ children }) {
               </aside>
 
               {/* Main content */}
-              <section className="min-w-0 flex flex-col min-h-[calc(100vh-6rem)] rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 sm:p-6">
-                <div className="w-full max-w-none flex-1 min-h-0 overflow-hidden">
+              <section className="min-w-0 flex flex-col h-[calc(100vh-8rem)] rounded-2xl bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-4 sm:p-6">
+                <div className="w-full max-w-none flex-1 min-h-0 overflow-y-auto">
                   {children}
                 </div>
               </section>
