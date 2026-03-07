@@ -1,12 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuizState } from "./hooks/useQuizState";
 import QuizStyles from "./components/QuizStyles";
 import QuizView from "./components/QuizView";
 import ResultsView from "./components/ResultsView";
 import QuizSetSwitcher from "./components/QuizSetSwitcher";
 import GenerateQuizModal from "./components/GenerateQuizModal";
-import StudyAIPanel from "../../components/StudyAIPanel";
+import { useStudyAIPanel } from "../../app/components/StudyAIPanelProvider";
 
 export default function QuizPage() {
   const state = useQuizState();
@@ -18,8 +19,28 @@ export default function QuizPage() {
     startQuizPomodoro, selectAnswer, goNext, goBack, resetQuiz, pause,
     handleGenerate, handleDeleteSet, fetchFolders,
     showGenerate, setShowGenerate, folders,
-    showAIPanel, setShowAIPanel,
   } = state;
+
+  const { setStudyContext } = useStudyAIPanel();
+
+  // Provide quiz context to the global AI panel
+  useEffect(() => {
+    if (q) {
+      setStudyContext({
+        type: "quiz",
+        question: q.question,
+        options: q.options,
+        quizTitle,
+      });
+    } else {
+      setStudyContext(null);
+    }
+  }, [q, quizTitle, setStudyContext]);
+
+  // Clear context on unmount
+  useEffect(() => {
+    return () => setStudyContext(null);
+  }, [setStudyContext]);
 
   if (pageLoading) {
     return (

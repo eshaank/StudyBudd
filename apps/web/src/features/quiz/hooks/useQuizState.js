@@ -24,9 +24,6 @@ export function useQuizState() {
   const [showGenerate, setShowGenerate] = useState(false);
   const [folders, setFolders] = useState([]);
 
-  // AI panel
-  const [showAIPanel, setShowAIPanel] = useState(false);
-
   // Quiz state
   const [view, setView] = useState("quiz");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -204,7 +201,5 @@ export function useQuizState() {
     handleGenerate, handleDeleteSet, fetchFolders,
     // Generate modal
     showGenerate, setShowGenerate, folders,
-    // AI panel
-    showAIPanel, setShowAIPanel,
   };
 }

@@ -4,7 +4,7 @@ export default function FlashcardViewer({
   current, isFlipped, setIsFlipped, accentColor, tab,
   index, cards, progressPct, disabledPrev, disabledNext,
   flip, prev, next, goToCard,
-  showAIPanel, sources, showCardSources, setShowCardSources,
+  sources, showCardSources, setShowCardSources,
 }) {
   return (
     <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 shadow-sm overflow-hidden">
@@ -64,7 +64,7 @@ export default function FlashcardViewer({
             <div className="fc-card-wrapper relative cursor-pointer" onClick={flip}>
               <div className="fc-card-glow" style={{ "--accent": accentColor }} />
 
-              <div className={`fc-card-scene ${showAIPanel ? "h-[280px]" : "h-[340px] sm:h-[400px]"}`}>
+              <div className="fc-card-scene h-[340px] sm:h-[400px]">
                 <div className={`fc-card-inner h-full ${isFlipped ? "flipped" : ""}`}>
 
                   {/* Front face */}

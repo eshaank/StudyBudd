@@ -25,9 +25,6 @@ export function useFlashcardNav() {
   const [showGenerate, setShowGenerate] = useState(false);
   const [folders, setFolders] = useState([]);
 
-  // AI panel state
-  const [showAIPanel, setShowAIPanel] = useState(false);
-
   // Sources state
   const [sources, setSources] = useState({ source_documents: [], source_chunks: [] });
   const [showCardSources, setShowCardSources] = useState(false);
@@ -199,8 +196,6 @@ export function useFlashcardNav() {
     deleteDeck, handleGenerate, fetchFolders,
     // Generate modal
     showGenerate, setShowGenerate, folders,
-    // AI panel
-    showAIPanel, setShowAIPanel,
     // Sources
     sources, showCardSources, setShowCardSources,
   };

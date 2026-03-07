@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useFlashcardNav } from "./hooks/useFlashcardNav";
 import { TABS } from "./constants/flashcards";
 import FlashcardStyles from "./components/FlashcardStyles";
 import DeckSwitcher from "./components/DeckSwitcher";
 import FlashcardViewer from "./components/FlashcardViewer";
 import GenerateModal from "./components/GenerateModal";
-import StudyAIPanel from "../../../components/StudyAIPanel";
+import { useStudyAIPanel } from "../../components/StudyAIPanelProvider";
 
 export default function FlashcardsPage() {
   const nav = useFlashcardNav();
@@ -19,9 +20,29 @@ export default function FlashcardsPage() {
     disabledPrev, disabledNext,
     deleteDeck, handleGenerate, fetchFolders,
     showGenerate, setShowGenerate, folders,
-    showAIPanel, setShowAIPanel,
     sources, showCardSources, setShowCardSources,
   } = nav;
+
+  const { setStudyContext } = useStudyAIPanel();
+
+  // Provide flashcard context to the global AI panel
+  useEffect(() => {
+    if (current) {
+      setStudyContext({
+        type: "flashcard",
+        question: current.front,
+        answer: isFlipped ? current.back : undefined,
+        deckTitle: deck?.title,
+      });
+    } else {
+      setStudyContext(null);
+    }
+  }, [current, isFlipped, deck?.title, setStudyContext]);
+
+  // Clear context on unmount
+  useEffect(() => {
+    return () => setStudyContext(null);
+  }, [setStudyContext]);
 
   if (loading) {
     return (
@@ -38,7 +59,7 @@ export default function FlashcardsPage() {
       <div className="fc-root" style={{ "--accent": accentColor }}>
 
         {/* Compact toolbar */}
-        <div className={`flex items-center gap-2 min-w-0 ${showAIPanel ? "mb-3" : "mb-5"}`}>
+        <div className="flex items-center gap-2 min-w-0 mb-5">
           {decks.length > 0 && (
             <DeckSwitcher
               decks={decks}
@@ -51,17 +72,6 @@ export default function FlashcardsPage() {
           <div className="flex-1" />
 
           <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => setShowAIPanel((v) => !v)}
-              className="px-3 py-2 rounded-xl text-sm font-semibold border transition-all"
-              style={{
-                background: showAIPanel ? accentColor : "#fff",
-                color: showAIPanel ? "#fff" : "#475569",
-                borderColor: showAIPanel ? accentColor : "#e2e8f0",
-              }}
-            >
-              {showAIPanel ? "Hide AI" : "Ask AI"}
-            </button>
             <button
               onClick={() => { fetchFolders(); setShowGenerate(true); }}
               className="px-3 py-2 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
@@ -86,62 +96,41 @@ export default function FlashcardsPage() {
           </div>
         </div>
 
-        {/* Main content row */}
-        <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-
-            {!decks.length ? (
-              <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-12 text-center">
-                <div className="text-4xl mb-3">📚</div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">No flashcard sets yet</h3>
-                <p className="text-slate-500 dark:text-slate-400 mb-5">Generate flashcards from your uploaded documents to start studying.</p>
-                <button
-                  onClick={() => { fetchFolders(); setShowGenerate(true); }}
-                  className="px-6 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: accentColor }}
-                >
-                  + Generate Flashcards
-                </button>
-              </div>
-            ) : (
-              <FlashcardViewer
-                current={current}
-                isFlipped={isFlipped}
-                setIsFlipped={setIsFlipped}
-                accentColor={accentColor}
-                tab={tab}
-                index={index}
-                cards={cards}
-                progressPct={progressPct}
-                disabledPrev={disabledPrev}
-                disabledNext={disabledNext}
-                flip={flip}
-                prev={prev}
-                next={next}
-                goToCard={goToCard}
-                showAIPanel={showAIPanel}
-                sources={sources}
-                showCardSources={showCardSources}
-                setShowCardSources={setShowCardSources}
-              />
-            )}
-
+        {/* Main content */}
+        {!decks.length ? (
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-12 text-center">
+            <div className="text-4xl mb-3">📚</div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">No flashcard sets yet</h3>
+            <p className="text-slate-500 dark:text-slate-400 mb-5">Generate flashcards from your uploaded documents to start studying.</p>
+            <button
+              onClick={() => { fetchFolders(); setShowGenerate(true); }}
+              className="px-6 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: accentColor }}
+            >
+              + Generate Flashcards
+            </button>
           </div>
-
-          {showAIPanel && (
-            <StudyAIPanel
-              context={{
-                type: "flashcard",
-                question: current?.front,
-                answer: isFlipped ? current?.back : undefined,
-                deckTitle: deck?.title,
-              }}
-              accentColor={accentColor}
-              theme="light"
-              onClose={() => setShowAIPanel(false)}
-            />
-          )}
-        </div>
+        ) : (
+          <FlashcardViewer
+            current={current}
+            isFlipped={isFlipped}
+            setIsFlipped={setIsFlipped}
+            accentColor={accentColor}
+            tab={tab}
+            index={index}
+            cards={cards}
+            progressPct={progressPct}
+            disabledPrev={disabledPrev}
+            disabledNext={disabledNext}
+            flip={flip}
+            prev={prev}
+            next={next}
+            goToCard={goToCard}
+            sources={sources}
+            showCardSources={showCardSources}
+            setShowCardSources={setShowCardSources}
+          />
+        )}
 
         {/* Footer */}
         <div className="flex justify-between items-center text-sm pt-3">
