@@ -1,8 +1,3 @@
-
-Here’s a concise **ideal design** that fits your stack and keeps the RAG flow simple and testable.
-
----
-
 ## 1. Single source of truth: one document, two roles
 
 - **`documents`** (existing) = “user uploaded this file.”  
