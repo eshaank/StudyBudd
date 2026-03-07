@@ -37,7 +37,6 @@ export default function AccountPage() {
         return;
       }
 
-      // ✅ don't throw on missing row
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("full_name")
@@ -45,7 +44,6 @@ export default function AccountPage() {
         .maybeSingle();
 
       if (profErr) {
-        // If profile row doesn't exist yet, that's okay; we'll create on save
         console.warn("Profile load warning:", profErr);
       }
 
@@ -69,7 +67,6 @@ export default function AccountPage() {
   }, [router]);
 
   function formatSupabaseError(e) {
-    // Supabase PostgrestError usually has these fields
     if (e && typeof e === "object") {
       const msg = e.message || e.error_description || e.error || "";
       const details = e.details || "";
@@ -82,7 +79,6 @@ export default function AccountPage() {
         .join(" | ");
 
       if (compact) return compact;
-      // fallback: show something instead of {}
       try {
         return JSON.stringify(e);
       } catch {
@@ -106,7 +102,6 @@ export default function AccountPage() {
         updated_at: new Date().toISOString(),
       };
 
-      // ✅ deterministic upsert + return updated row
       const { data, error } = await supabase
         .from("profiles")
         .upsert(payload, { onConflict: "id" })
@@ -116,12 +111,11 @@ export default function AccountPage() {
       if (error) throw error;
 
       setFullName(data?.full_name ?? "");
-      setNotice("Saved ✅");
+      setNotice("Saved!");
     } catch (e) {
       const msg = formatSupabaseError(e);
       console.error("saveChanges error:", e);
 
-      // Helpful hint for the most common issue
       if (msg.toLowerCase().includes("row level security") || msg.toLowerCase().includes("rls")) {
         setNotice("Save failed: RLS policy blocking update/insert.");
       } else {
@@ -140,30 +134,30 @@ export default function AccountPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-white">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 text-slate-900 dark:text-white">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         <div className="mb-6">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Account</h1>
-          <p className="text-white/70 mt-1">Manage your profile and account settings.</p>
+          <h1 className="text-4xl font-bold">Account</h1>
+          <p className="text-slate-600 dark:text-white/70 mt-1">Manage your profile and account settings.</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)] p-6 sm:p-8">
+        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-xl shadow-xl dark:shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)] p-6 sm:p-8">
           <div className="grid gap-6 sm:grid-cols-[220px_1fr] items-start">
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+            <div className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-4">
               <AvatarUploader />
-              <p className="mt-3 text-xs text-white/50">
+              <p className="mt-3 text-xs text-slate-500 dark:text-white/50">
                 Avatar stored in Supabase Storage (avatars bucket).
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-semibold text-white/80">Full name</label>
+                <label className="text-sm font-semibold text-slate-700 dark:text-white/80">Full name</label>
                 <input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={loading}
-                  className="mt-2 w-full rounded-xl bg-slate-950/40 border border-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60"
+                  className="mt-2 w-full rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60 text-slate-900 dark:text-white"
                   placeholder="Enter your name"
                 />
               </div>
@@ -172,7 +166,7 @@ export default function AccountPage() {
                 <button
                   onClick={saveChanges}
                   disabled={loading || saving || !user}
-                  className="rounded-xl bg-indigo-500 px-5 py-3 font-semibold hover:bg-indigo-600 transition disabled:opacity-60"
+                  className="rounded-xl bg-indigo-500 px-5 py-3 font-semibold text-white hover:bg-indigo-600 transition disabled:opacity-60"
                   type="button"
                 >
                   {saving ? "Saving..." : "Save changes"}
@@ -180,16 +174,16 @@ export default function AccountPage() {
 
                 <button
                   onClick={signOut}
-                  className="rounded-xl bg-white/10 px-5 py-3 font-semibold hover:bg-white/15 transition"
+                  className="rounded-xl bg-slate-100 dark:bg-white/10 px-5 py-3 font-semibold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition"
                   type="button"
                 >
                   Sign out
                 </button>
 
-                {notice ? <span className="text-sm text-white/80">{notice}</span> : null}
+                {notice ? <span className="text-sm text-slate-700 dark:text-white/80">{notice}</span> : null}
               </div>
 
-              <p className="text-xs text-white/50">Profile data in Supabase (profiles table).</p>
+              <p className="text-xs text-slate-500 dark:text-white/50">Profile data in Supabase (profiles table).</p>
             </div>
           </div>
         </div>

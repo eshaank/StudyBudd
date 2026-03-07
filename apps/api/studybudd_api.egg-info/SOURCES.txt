@@ -3,6 +3,7 @@ pyproject.toml
 app/__init__.py
 app/main.py
 app/chat/__init__.py
+app/chat/agent.py
 app/chat/models.py
 app/chat/router.py
 app/chat/schemas.py
@@ -19,6 +20,10 @@ app/documents/router.py
 app/documents/schemas.py
 app/documents/service.py
 app/documents/text_extraction.py
+app/folders/__init__.py
+app/folders/router.py
+app/folders/schemas.py
+app/folders/service.py
 app/inference/__init__.py
 app/inference/client.py
 app/inference/prompts.py
@@ -32,4 +37,8 @@ studybudd_api.egg-info/SOURCES.txt
 studybudd_api.egg-info/dependency_links.txt
 studybudd_api.egg-info/requires.txt
 studybudd_api.egg-info/top_level.txt
+tests/test_chat.py
 tests/test_chat_full.py
+tests/test_documents.py
+tests/test_folders.py
+tests/test_processing.py

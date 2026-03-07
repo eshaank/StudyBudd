@@ -1,3 +1,4 @@
+
 # Dashboard -- Front-End Design
 
 This document covers the dashboard shell, sidebar navigation, home page, and the supporting components that tie the authenticated experience together.

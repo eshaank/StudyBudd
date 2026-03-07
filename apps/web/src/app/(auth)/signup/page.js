@@ -2,60 +2,26 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createSupabaseBrowser } from "../../../lib/supabase/client";
+import { useAuthSession } from "../hooks/useAuthSession";
+import AuthLayout, { AuthLoadingScreen } from "../components/AuthLayout";
+import AuthFeaturePanel from "../components/AuthFeaturePanel";
+import GoogleAuthButton from "../components/GoogleAuthButton";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { checkingSession } = useAuthSession("/");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
-
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [touched, setTouched] = useState({
-    email: false,
-    password: false,
-    confirmPw: false,
-  });
-
+  const [touched, setTouched] = useState({ email: false, password: false, confirmPw: false });
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
 
-  // Optional Step 8 (client): If already logged in, redirect away from signup
-  useEffect(() => {
-    let isMounted = true;
-
-    async function checkSession() {
-      try {
-        const supabase = createSupabaseBrowser();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!isMounted) return;
-
-        if (user) {
-          router.replace("/"); // or "/dashboard"
-          return;
-        }
-      } catch {
-        // ignore
-      } finally {
-        if (isMounted) setCheckingSession(false);
-      }
-    }
-
-    checkSession();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
-
-  // Derived validation
   const emailErr = useMemo(() => {
     if (!touched.email) return "";
     if (!email.trim()) return "Email is required.";
@@ -77,43 +43,20 @@ export default function SignupPage() {
     return "";
   }, [confirmPw, password, touched.confirmPw]);
 
-  const canSubmit = Boolean(
-    email &&
-      password &&
-      confirmPw &&
-      !emailErr &&
-      !pwErr &&
-      !confirmErr &&
-      password === confirmPw
-  );
+  const canSubmit = Boolean(email && password && confirmPw && !emailErr && !pwErr && !confirmErr && password === confirmPw);
 
-  // Step 7: Email/password signup via Supabase
   async function onSubmit(e) {
     e.preventDefault();
     setTouched({ email: true, password: true, confirmPw: true });
     setError("");
-
     if (!canSubmit) return;
 
     setLoading(true);
     try {
       const supabase = createSupabaseBrowser();
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-
-      // Supabase may require email confirmation depending on your project settings.
-      // If email confirmation is ON, user may not be fully signed in yet.
-      // We'll redirect either way and show no error.
-      if (data?.user) {
-        router.push("/"); // or "/dashboard"
-      } else {
-        router.push("/"); // still redirect
-      }
+      router.push("/");
     } catch (err) {
       setError(err?.message || "Signup failed. Please try again.");
     } finally {
@@ -121,236 +64,143 @@ export default function SignupPage() {
     }
   }
 
-  // Google signup/login (Supabase creates user automatically)
   async function onGoogle() {
     setError("");
     setLoading(true);
     try {
       const supabase = createSupabaseBrowser();
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-
       if (error) throw error;
-      // No router push — OAuth redirects automatically
     } catch (err) {
       setError(err?.message || "Google signup failed. Try again.");
       setLoading(false);
     }
   }
 
-  if (checkingSession) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100 px-4">
-        <div className="rounded-2xl bg-white/90 backdrop-blur shadow-xl border border-slate-100 p-6 text-slate-700">
-          Checking session...
-        </div>
-      </main>
-    );
-  }
+  if (checkingSession) return <AuthLoadingScreen />;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-100 flex items-center justify-center px-4 py-10">
-      {/* Decorative background blobs */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-blue-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl" />
+    <AuthLayout
+      featurePanel={
+        <AuthFeaturePanel
+          badge={"\uD83D\uDE80 Get started"}
+          title="Build better study habits"
+          description={"Organize goals, generate quizzes, and track progress \u2014 all in one place."}
+          features={[
+            "Create goals & streaks",
+            "AI notes & flashcards",
+            "Smart quizzes",
+            "Study agents",
+          ]}
+          tip="Tip: Use Google sign-in to get started in 2 clicks."
+        />
+      }
+    >
+      <div className="rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-xl border border-slate-100 dark:border-slate-700 p-6 md:p-8">
+        <div className="mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-400">
+            StudyBudd &bull; Auth
+          </div>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mt-3">Create your account</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Sign up to start using <span className="font-semibold">StudyBudd</span>.
+          </p>
+        </div>
 
-      {/* Content */}
-      <div className="relative z-10 grid w-full max-w-5xl grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left: Signup card */}
-        <div className="rounded-2xl bg-white/90 backdrop-blur shadow-xl border border-slate-100 p-6 md:p-8">
-          {/* Brand */}
-          <div className="mb-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-indigo-700">
-              StudyBudd • Auth
-            </div>
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>
+        )}
 
-            <h1 className="text-2xl font-bold text-slate-900 mt-3">
-              Create your account
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Sign up to start using{" "}
-              <span className="font-semibold">StudyBudd</span>.
-            </p>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+              placeholder="you@school.edu"
+              autoComplete="email"
+              className={`mt-2 w-full rounded-xl border px-4 py-3 outline-none transition text-slate-900 dark:text-white bg-white dark:bg-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 ${
+                emailErr ? "border-red-300 dark:border-red-700 focus:ring-red-200 dark:focus:ring-red-800" : "border-slate-200 dark:border-slate-600 focus:ring-indigo-200 dark:focus:ring-indigo-800"
+              }`}
+            />
+            {emailErr && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{emailErr}</p>}
           </div>
 
-          {error && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={onSubmit} className="space-y-4">
-            {/* Email */}
-            <div>
-              <label className="text-sm font-medium text-slate-700">Email</label>
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+            <div className="mt-2 flex items-center gap-2">
               <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-                placeholder="you@school.edu"
-                autoComplete="email"
-                className={`mt-2 w-full rounded-xl border px-4 py-3 outline-none transition
-                  text-slate-900 placeholder:text-slate-400
-                  focus:ring-2
-                  ${
-                    emailErr
-                      ? "border-red-300 focus:ring-red-200"
-                      : "border-slate-200 focus:ring-indigo-200"
-                  }`}
+                value={password}
+                type={showPw ? "text" : "password"}
+                onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+                placeholder={"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
+                autoComplete="new-password"
+                className={`w-full rounded-xl border px-4 py-3 outline-none transition text-slate-900 dark:text-white bg-white dark:bg-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 ${
+                  pwErr ? "border-red-300 dark:border-red-700 focus:ring-red-200 dark:focus:ring-red-800" : "border-slate-200 dark:border-slate-600 focus:ring-indigo-200 dark:focus:ring-indigo-800"
+                }`}
               />
-              {emailErr && <p className="mt-2 text-sm text-red-600">{emailErr}</p>}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="text-sm font-medium text-slate-700">
-                Password
-              </label>
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  value={password}
-                  type={showPw ? "text" : "password"}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onBlur={() => setTouched((t) => ({ ...t, password: true }))}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  className={`w-full rounded-xl border px-4 py-3 outline-none transition
-                    text-slate-900 placeholder:text-slate-400
-                    focus:ring-2
-                    ${
-                      pwErr
-                        ? "border-red-300 focus:ring-red-200"
-                        : "border-slate-200 focus:ring-indigo-200"
-                    }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw((s) => !s)}
-                  className="shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                >
-                  {showPw ? "Hide" : "Show"}
-                </button>
-              </div>
-              {pwErr && <p className="mt-2 text-sm text-red-600">{pwErr}</p>}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="text-sm font-medium text-slate-700">
-                Confirm password
-              </label>
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  value={confirmPw}
-                  type={showConfirmPw ? "text" : "password"}
-                  onChange={(e) => setConfirmPw(e.target.value)}
-                  onBlur={() => setTouched((t) => ({ ...t, confirmPw: true }))}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  className={`w-full rounded-xl border px-4 py-3 outline-none transition
-                    text-slate-900 placeholder:text-slate-400
-                    focus:ring-2
-                    ${
-                      confirmErr
-                        ? "border-red-300 focus:ring-red-200"
-                        : "border-slate-200 focus:ring-indigo-200"
-                    }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPw((s) => !s)}
-                  className="shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                >
-                  {showConfirmPw ? "Hide" : "Show"}
-                </button>
-              </div>
-              {confirmErr && <p className="mt-2 text-sm text-red-600">{confirmErr}</p>}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end pt-1">
-              <button
-                disabled={!canSubmit || loading}
-                className="rounded-xl bg-indigo-600 px-4 py-3 text-white font-semibold hover:bg-indigo-700
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  focus:outline-none focus:ring-2 focus:ring-indigo-200"
-              >
-                {loading ? "Creating account..." : "Sign up"}
-              </button>
-            </div>
-
-            {/* Divider */}
-            <div className="pt-2">
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-slate-200" />
-                <span className="text-xs text-slate-500">OR</span>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-
               <button
                 type="button"
-                className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-900 hover:bg-slate-50
-                  focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                onClick={onGoogle}
-                disabled={loading}
+                onClick={() => setShowPw((s) => !s)}
+                className="shrink-0 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-3 text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800"
               >
-                {loading ? "Opening Google..." : "Continue with Google"}
+                {showPw ? "Hide" : "Show"}
               </button>
             </div>
-
-            <p className="text-sm text-slate-600 pt-2">
-              Already have an account?{" "}
-              <Link className="text-indigo-700 hover:underline" href="/login">
-                Log in
-              </Link>
-            </p>
-          </form>
-
-          <p className="text-xs text-slate-500 mt-6">
-            Auth note: Email signup may require confirmation depending on Supabase settings.
-          </p>
-        </div>
-
-        {/* Right: Visual panel */}
-        <div className="hidden md:flex flex-col justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 p-8 text-white shadow-xl">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-            🚀 Get started
+            {pwErr && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{pwErr}</p>}
           </div>
 
-          <h2 className="text-3xl font-bold mt-4">Build better study habits</h2>
-
-          <p className="text-indigo-100 mt-3">
-            Organize goals, generate quizzes, and track progress — all in one place.
-          </p>
-
-          <ul className="mt-6 space-y-3 text-indigo-100">
-            <li className="flex items-center gap-2">
-              <span className="text-white">✔</span> Create goals & streaks
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-white">✔</span> AI notes & flashcards
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-white">✔</span> Smart quizzes
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-white">✔</span> Study agents
-            </li>
-          </ul>
-
-          <div className="mt-8 rounded-2xl bg-white/10 p-5">
-            <p className="text-sm text-indigo-100">
-              Tip: Use Google sign-in to get started in 2 clicks.
-            </p>
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Confirm password</label>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                value={confirmPw}
+                type={showConfirmPw ? "text" : "password"}
+                onChange={(e) => setConfirmPw(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, confirmPw: true }))}
+                placeholder={"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
+                autoComplete="new-password"
+                className={`w-full rounded-xl border px-4 py-3 outline-none transition text-slate-900 dark:text-white bg-white dark:bg-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 ${
+                  confirmErr ? "border-red-300 dark:border-red-700 focus:ring-red-200 dark:focus:ring-red-800" : "border-slate-200 dark:border-slate-600 focus:ring-indigo-200 dark:focus:ring-indigo-800"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPw((s) => !s)}
+                className="shrink-0 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-3 text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800"
+              >
+                {showConfirmPw ? "Hide" : "Show"}
+              </button>
+            </div>
+            {confirmErr && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{confirmErr}</p>}
           </div>
-        </div>
+
+          <div className="flex items-center justify-end pt-1">
+            <button
+              disabled={!canSubmit || loading}
+              className="rounded-xl bg-indigo-600 px-4 py-3 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800"
+            >
+              {loading ? "Creating account..." : "Sign up"}
+            </button>
+          </div>
+
+          <GoogleAuthButton onClick={onGoogle} loading={loading} />
+
+          <p className="text-sm text-slate-600 dark:text-slate-400 pt-2">
+            Already have an account?{" "}
+            <Link className="text-indigo-700 dark:text-indigo-400 hover:underline" href="/login">Log in</Link>
+          </p>
+        </form>
+
+        <p className="text-xs text-slate-500 dark:text-slate-500 mt-6">
+          Auth note: Email signup may require confirmation depending on Supabase settings.
+        </p>
       </div>
-    </main>
+    </AuthLayout>
   );
 }
