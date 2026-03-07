@@ -97,22 +97,22 @@ export default function DashboardHome() {
   return (
     <div className="space-y-10">
       {/* Header */}
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm p-6">
         <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-extrabold text-slate-900">
-            {greeting}, {loading ? "…" : displayName} 👋
+          <h2 className="text-4xl font-bold text-slate-900 dark:text-white">
+            {greeting}, {loading ? "..." : displayName} 👋
           </h2>
 
           {recent.lastSession ? (
-            <p className="text-slate-600">
+            <p className="text-slate-600 dark:text-slate-400">
               Last session:{" "}
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {recent.lastSession.course}
               </span>{" "}
               · {recent.lastSession.minutes} min focus
             </p>
           ) : (
-            <p className="text-slate-600">Let’s pick up where you left off.</p>
+            <p className="text-slate-600 dark:text-slate-400">Let's pick up where you left off.</p>
           )}
         </div>
       </section>
@@ -120,21 +120,21 @@ export default function DashboardHome() {
       {/* Continue Where You Left Off */}
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-3">
-          <h3 className="text-xl font-bold text-slate-900">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">
             Continue where you left off
           </h3>
           <Link
             href="/dashboard/chat"
-            className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+            className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
           >
             Open Chat →
           </Link>
         </div>
 
         {recent.continueCards.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 text-slate-600 dark:text-slate-400">
             No recent activity yet. Start a chat or upload notes to see smart
-            “Continue” cards here.
+            "Continue" cards here.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -142,20 +142,20 @@ export default function DashboardHome() {
               <Link
                 key={c.id}
                 href={c.href}
-                className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition"
+                className="group rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm hover:shadow-md transition"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                  <div className="text-xs font-bold px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                     {c.badge}
                   </div>
-                  <span className="text-slate-400 group-hover:text-slate-600 transition">
+                  <span className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition">
                     →
                   </span>
                 </div>
 
                 <div className="mt-3">
-                  <div className="font-extrabold text-slate-900">{c.title}</div>
-                  <div className="mt-1 text-sm text-slate-600">{c.subtitle}</div>
+                  <div className="font-bold text-slate-900 dark:text-white">{c.title}</div>
+                  <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">{c.subtitle}</div>
                 </div>
               </Link>
             ))}
@@ -165,9 +165,8 @@ export default function DashboardHome() {
 
       {/* Tools */}
       <section className="space-y-4">
-        <h3 className="text-xl font-bold text-slate-900">Your tools</h3>
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Your tools</h3>
 
-        {/* ✅ changed lg:grid-cols-4 -> lg:grid-cols-5 to fit 5 tools */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <ToolCard
             title="Pomodoro"
@@ -202,14 +201,14 @@ export default function DashboardHome() {
         </div>
       </section>
 
-      {/* Soft “upgrade” area */}
-      <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-50 to-slate-50 p-6">
+      {/* Soft "upgrade" area */}
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-r from-indigo-50 to-slate-50 dark:from-indigo-950/50 dark:to-slate-800/50 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="font-extrabold text-slate-900">
+            <div className="font-bold text-slate-900 dark:text-white">
               Unlock full memory + unlimited focus
             </div>
-            <div className="text-slate-600 text-sm mt-1">
+            <div className="text-slate-600 dark:text-slate-400 text-sm mt-1">
               Keep chat history, generate full quizzes, and remove daily limits.
             </div>
           </div>
@@ -217,13 +216,13 @@ export default function DashboardHome() {
           <div className="flex gap-2">
             <Link
               href="/pricing"
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
+              className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white font-bold hover:bg-slate-800 dark:hover:bg-indigo-700 transition"
             >
               Upgrade
             </Link>
             <Link
               href="/dashboard/chat"
-              className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold hover:bg-slate-50 transition"
+              className="px-4 py-2 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white font-bold hover:bg-slate-50 dark:hover:bg-slate-600 transition"
             >
               Keep studying
             </Link>
@@ -238,15 +237,15 @@ function ToolCard({ title, desc, href, pill }) {
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition"
+      className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm hover:shadow-md transition"
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="font-extrabold text-slate-900">{title}</div>
-        <div className="text-xs font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+        <div className="font-bold text-slate-900 dark:text-white">{title}</div>
+        <div className="text-xs font-bold px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
           {pill}
         </div>
       </div>
-      <div className="mt-2 text-sm text-slate-600">{desc}</div>
+      <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">{desc}</div>
     </Link>
   );
 }

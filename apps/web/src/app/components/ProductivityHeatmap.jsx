@@ -31,7 +31,6 @@ export default function ProductivityHeatmap() {
       const end = new Date(today);
       end.setHours(0, 0, 0, 0);
 
-      // GitHub-like: show last 52 weeks + current (53 columns)
       const start = new Date(end);
       start.setDate(start.getDate() - 370);
       const alignedStart = startOfWeekSunday(start);
@@ -61,7 +60,6 @@ export default function ProductivityHeatmap() {
 
       setCells(all);
 
-      // streak: consecutive days ending today with minutes > 0
       let s = 0;
       const back = new Date(end);
       while (true) {
@@ -87,14 +85,13 @@ export default function ProductivityHeatmap() {
   }
 
   const colors = [
-    "bg-white/10",
-    "bg-emerald-900/60",
-    "bg-emerald-800/70",
-    "bg-emerald-600/80",
-    "bg-emerald-400/90",
+    "bg-slate-100 dark:bg-white/10",
+    "bg-emerald-200 dark:bg-emerald-900/60",
+    "bg-emerald-300 dark:bg-emerald-800/70",
+    "bg-emerald-500 dark:bg-emerald-600/80",
+    "bg-emerald-600 dark:bg-emerald-400/90",
   ];
 
-  // Build weeks: 53 columns, each column is 7 cells (Sun..Sat)
   const weeks = useMemo(() => {
     const w = [];
     for (let i = 0; i < cells.length; i += 7) w.push(cells.slice(i, i + 7));
@@ -102,15 +99,15 @@ export default function ProductivityHeatmap() {
   }, [cells]);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5">
+    <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 backdrop-blur p-5">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <div className="text-white font-extrabold text-lg">Productivity</div>
-          <div className="text-white/70 text-sm">
-            Current streak: <span className="font-bold text-white">{streak}</span> day(s)
+          <div className="text-slate-900 dark:text-white font-bold text-lg">Productivity</div>
+          <div className="text-slate-600 dark:text-white/70 text-sm">
+            Current streak: <span className="font-bold text-slate-900 dark:text-white">{streak}</span> day(s)
           </div>
         </div>
-        <div className="text-white/50 text-xs">Last 52 weeks</div>
+        <div className="text-slate-500 dark:text-white/50 text-xs">Last 52 weeks</div>
       </div>
 
       <div className="mt-4 overflow-x-auto">
@@ -129,7 +126,7 @@ export default function ProductivityHeatmap() {
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-2 text-xs text-white/60">
+      <div className="mt-3 flex items-center justify-end gap-2 text-xs text-slate-500 dark:text-white/60">
         <span>Less</span>
         {colors.map((cls, i) => (
           <div key={i} className={`h-3 w-3 rounded-[3px] ${cls}`} />
@@ -137,7 +134,7 @@ export default function ProductivityHeatmap() {
         <span>More</span>
       </div>
 
-      <div className="mt-2 text-xs text-white/40">
+      <div className="mt-2 text-xs text-slate-400 dark:text-white/40">
         Tip: This fills in once you <b>finish</b> a focus Pomodoro (hits 0).
       </div>
     </div>

@@ -40,35 +40,35 @@ export default function PomodoroTimer() {
 
   const accentColor =
     mode === "focus"
-      ? "text-indigo-600"
+      ? "text-indigo-600 dark:text-indigo-400"
       : mode === "shortBreak"
-      ? "text-emerald-600"
-      : "text-blue-600";
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-blue-600 dark:text-blue-400";
 
   return (
     <div className="w-full space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
             Pomodoro
           </p>
-          <p className="text-sm font-bold text-slate-700 mt-0.5">{label}</p>
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-0.5">{label}</p>
         </div>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-slate-400 dark:text-slate-500">
           {cycleCount} {cycleCount === 1 ? "session" : "sessions"}
         </span>
       </div>
 
       {/* Timer display */}
       <div className="flex items-center justify-center py-4">
-        <div className={`text-6xl font-extrabold tabular-nums ${accentColor}`}>
+        <div className={`text-6xl font-bold tabular-nums ${accentColor}`}>
           {pad2(mm)}:{pad2(ss)}
         </div>
       </div>
 
       {/* Mode tabs */}
-      <div className="grid grid-cols-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <div className="grid grid-cols-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
         <ModeBtn
           active={mode === "focus"}
           activeClass="bg-indigo-600 text-white"
@@ -105,7 +105,7 @@ export default function PomodoroTimer() {
         ) : (
           <button
             onClick={pause}
-            className="flex-1 rounded-xl bg-slate-800 py-2.5 text-sm font-bold text-white hover:bg-slate-700 transition"
+            className="flex-1 rounded-xl bg-slate-800 dark:bg-slate-600 py-2.5 text-sm font-bold text-white hover:bg-slate-700 dark:hover:bg-slate-500 transition"
             type="button"
           >
             Pause
@@ -113,14 +113,14 @@ export default function PomodoroTimer() {
         )}
         <button
           onClick={resetTimer}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+          className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
           type="button"
         >
           Reset
         </button>
         <button
           onClick={resetAll}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+          className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
           type="button"
         >
           Reset All
@@ -128,10 +128,10 @@ export default function PomodoroTimer() {
       </div>
 
       {/* Edit times collapsible */}
-      <div className="border-t border-slate-100 pt-3">
+      <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
         <button
           onClick={() => setShowEditTimes((v) => !v)}
-          className="flex w-full items-center justify-between text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+          className="flex w-full items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition"
           type="button"
         >
           <span>Edit Times</span>
@@ -183,7 +183,7 @@ export default function PomodoroTimer() {
           </div>
         )}
         {isRunning && showEditTimes && (
-          <p className="mt-2 text-[11px] text-slate-400">Pause timer to edit times.</p>
+          <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Pause timer to edit times.</p>
         )}
       </div>
     </div>
@@ -196,7 +196,7 @@ function ModeBtn({ active, activeClass, onClick, children }) {
       onClick={onClick}
       className={[
         "py-2 text-sm font-bold transition",
-        active ? activeClass : "bg-white text-slate-600 hover:bg-slate-50",
+        active ? activeClass : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700",
       ].join(" ")}
       type="button"
     >
@@ -207,8 +207,8 @@ function ModeBtn({ active, activeClass, onClick, children }) {
 
 function TimeInput({ label, suffix, value, onChange, min, max, disabled }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <div className="text-xs font-bold text-slate-500">{label}</div>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3">
+      <div className="text-xs font-bold text-slate-500 dark:text-slate-400">{label}</div>
       <input
         type="number"
         min={min}
@@ -216,9 +216,9 @@ function TimeInput({ label, suffix, value, onChange, min, max, disabled }) {
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
+        className="mt-1.5 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 disabled:opacity-50"
       />
-      <div className="text-[10px] text-slate-400 mt-1">{suffix}</div>
+      <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{suffix}</div>
     </div>
   );
 }
