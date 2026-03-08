@@ -10,6 +10,8 @@ This folder contains documentation for the StudyBudd application.
 - [Chat Streaming](./chat-streaming.md) - How streaming works from browser to Together AI
 - [Document Sharing](./document-sharing.md) - Share links and access control flow
 - [Document Sharing (ZH)](./document-sharing-implementation-zh.md) - Detailed Chinese implementation guide
+- [Chat & Share Summary (ZH)](./chat-share-summary-zh.md) - 中文版：Chat + Share 总结
+- [Chat & Share Summary (EN)](./chat-share-summary-en.md) - English version: Chat + Share summary
 
 ## Quick Start
 
