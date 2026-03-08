@@ -9,7 +9,7 @@ const WELCOME_MESSAGE = {
   created_at: new Date().toISOString(),
 };
 
-export default function useChatMessages(accessToken, activeId, setActiveId, fetchThreads) {
+export default function useChatMessages(accessToken, activeId, setActiveId, fetchThreads, selectedModel) {
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesContainerRef = useRef(null);
@@ -85,6 +85,7 @@ export default function useChatMessages(accessToken, activeId, setActiveId, fetc
           body: JSON.stringify({
             message: text,
             conversation_id: activeId,
+            model: selectedModel,
           }),
         });
 
@@ -177,7 +178,7 @@ export default function useChatMessages(accessToken, activeId, setActiveId, fetc
         setIsLoading(false);
       }
     },
-    [accessToken, activeId, setActiveId, fetchThreads]
+    [accessToken, activeId, setActiveId, fetchThreads, selectedModel]
   );
 
   return {

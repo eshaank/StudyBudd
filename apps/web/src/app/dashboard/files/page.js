@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FolderOpen } from "lucide-react";
 import { useNotifications } from "../../components/NotificationsContext";
 
 // Hooks
@@ -216,7 +217,7 @@ export default function FilesPage() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="px-5 py-10 text-center">
-                <div className="text-4xl">📁</div>
+                <FolderOpen className="w-10 h-10 mx-auto text-slate-400" />
                 <p className="mt-2 font-semibold text-slate-900">
                   {documents.length === 0 ? "No files yet" : "No matching files"}
                 </p>

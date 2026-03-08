@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import (
     Boolean,
@@ -11,45 +11,12 @@ from sqlalchemy import (
     ForeignKey,
     String,
     UniqueConstraint,
-    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-# =============================================================================
-# Base Classes and Mixins
-# =============================================================================
-
-
-class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy models."""
-
-    pass
-
-
-class TimestampMixin:
-    """Mixin for adding created_at and updated_at timestamps."""
-
-    created_at: Mapped[datetime] = mapped_column(
-        default=func.now(),
-        server_default=func.now(),
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        default=func.now(),
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-
-class UUIDMixin:
-    """Mixin for adding UUID primary key."""
-
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True,
-        default=uuid4,
-    )
-
+from app.core.models import Base, TimestampMixin, UUIDMixin
 
 # =============================================================================
 # Folder Entity

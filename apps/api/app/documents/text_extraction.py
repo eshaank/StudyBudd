@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def extract_text_from_document(document: Document) -> str:
-    """Extract text from a document (text or CSV file).
+    """Extract text from a document (text, CSV, or PDF file).
 
     Args:
         document: Document entity with storage_path, file_type, mime_type.
@@ -24,35 +24,34 @@ def extract_text_from_document(document: Document) -> str:
     Raises:
         ValueError: If file_type is not supported for text extraction.
     """
-    if document.file_type not in ("text", "csv"):
+    if document.file_type not in ("text", "csv", "pdf"):
         raise ValueError(
             f"Only text and CSV documents can be processed for RAG; got file_type={document.file_type!r}"
         )
 
+    if document.file_type == "pdf":
+        content = download_file(document.storage_path)
+        reader = PdfReader(io.BytesIO(content))
+
+        pages: list[str] = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages.append(text.strip())
+
+        return "\n\n".join(pages).strip()
+
     content = download_file(document.storage_path)
-    raw = content.decode("utf-8-sig")  # strip BOM if present
+    raw = content.decode("utf-8-sig")
 
     if document.file_type == "text":
         return raw.strip()
 
     if document.file_type == "csv":
-        # Parse CSV and flatten to one text block for chunking
         reader = csv.reader(io.StringIO(raw))
         parts: list[str] = []
         for row in reader:
             parts.extend(cell.strip() for cell in row if cell.strip())
         return " ".join(parts).strip()
-    
-    if document.file_type == "pdf":
-        content = download_file(document.storage_path)
-        reader = PdfReader(io.BytesIO(content))
-
-        parts: list[str] = []
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                parts.append(text.strip())
-
-        return "\n\n".join(parts).strip()
 
     return ""

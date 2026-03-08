@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.supabase import delete_file, upload_file
 from app.documents.models import Document, DocumentShare, DocumentShareRecipient
-from app.processing.models import Document as ProcessingDocument
+from app.processing.models import ProcessingDocument
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

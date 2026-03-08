@@ -4,6 +4,7 @@ export default function FlashcardViewer({
   current, isFlipped, setIsFlipped, accentColor, tab,
   index, cards, progressPct, disabledPrev, disabledNext,
   flip, prev, next, goToCard,
+  sources, showCardSources, setShowCardSources,
 }) {
   return (
     <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 shadow-sm overflow-hidden">
@@ -113,9 +114,57 @@ export default function FlashcardViewer({
                           {current.back}
                         </p>
                       </div>
-                      <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 italic">
-                        Can you explain this in your own words?
-                      </p>
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        {showCardSources && (sources?.source_documents?.length > 0 || sources?.source_chunks?.length > 0) && (
+                          <div className="mb-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-sm p-3 space-y-2 max-h-[140px] overflow-y-auto">
+                            {sources.source_documents?.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Source files</p>
+                                <ul className="space-y-0.5">
+                                  {sources.source_documents.map((doc) => (
+                                    <li key={doc.id} className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 truncate" title={doc.original_filename}>
+                                      {doc.original_filename}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {sources.source_chunks?.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Supporting chunks</p>
+                                <ul className="space-y-1.5">
+                                  {sources.source_chunks.map((chunk, i) => {
+                                    const docName = sources.source_documents?.find((d) => d.id === chunk.document_id)?.original_filename ?? "Document";
+                                    return (
+                                      <li key={i} className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight">
+                                        <span className="font-semibold text-slate-700 dark:text-slate-300">{docName}</span>
+                                        <span className="text-slate-400 ml-1">chunk {chunk.chunk_index + 1}</span>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowCardSources?.((v) => !v)}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all"
+                            style={{
+                              borderColor: showCardSources ? accentColor : "#e2e8f0",
+                              color: showCardSources ? accentColor : "#94a3b8",
+                              background: showCardSources ? `color-mix(in srgb, ${accentColor} 8%, white)` : "transparent",
+                            }}
+                          >
+                            {showCardSources ? "Hide Sources" : "Sources"}
+                          </button>
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                            Can you explain this in your own words?
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

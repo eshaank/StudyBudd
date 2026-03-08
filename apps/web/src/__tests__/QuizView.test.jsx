@@ -14,18 +14,31 @@ jest.mock("../features/quiz/components/FeedbackPanel", () => {
 
 const mockQuestion = {
   id: "q1",
-  prompt: "What is the time complexity of binary search?",
-  options: ["O(n)", "O(log n)", "O(n^2)", "O(1)"],
-  correctIndex: 1,
+  question: "What is the time complexity of binary search?",
+  options: [
+    { label: "A", text: "O(n)" },
+    { label: "B", text: "O(log n)" },
+    { label: "C", text: "O(n^2)" },
+    { label: "D", text: "O(1)" },
+  ],
+  correct_option: "B",
 };
 
-const mockQuiz = {
-  title: "DSA Quiz",
-  questions: [mockQuestion, { id: "q2", prompt: "Q2", options: ["a", "b"], correctIndex: 0 }],
-};
+const mockQuestions = [
+  mockQuestion,
+  {
+    id: "q2",
+    question: "Q2",
+    options: [
+      { label: "A", text: "a" },
+      { label: "B", text: "b" },
+    ],
+    correct_option: "A",
+  },
+];
 
 const defaultProps = {
-  quiz: mockQuiz,
+  questions: mockQuestions,
   q: mockQuestion,
   currentIndex: 0,
   cardKey: 0,
@@ -68,7 +81,7 @@ describe("QuizView", () => {
   it("calls selectAnswer when option is clicked", () => {
     render(<QuizView {...defaultProps} />);
     fireEvent.click(screen.getByText("O(log n)"));
-    expect(defaultProps.selectAnswer).toHaveBeenCalledWith(1);
+    expect(defaultProps.selectAnswer).toHaveBeenCalledWith("B");
   });
 
   it("shows Previous button when not answered", () => {
@@ -83,12 +96,12 @@ describe("QuizView", () => {
   });
 
   it("shows FeedbackPanel when answered", () => {
-    render(<QuizView {...defaultProps} hasAnswered={true} pickedForCurrent={1} />);
+    render(<QuizView {...defaultProps} hasAnswered={true} pickedForCurrent="B" />);
     expect(screen.getByTestId("feedback-panel")).toBeInTheDocument();
   });
 
   it("hides Previous button when answered", () => {
-    render(<QuizView {...defaultProps} hasAnswered={true} pickedForCurrent={1} />);
+    render(<QuizView {...defaultProps} hasAnswered={true} pickedForCurrent="B" />);
     expect(screen.queryByText(/Previous/)).not.toBeInTheDocument();
   });
 

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser, DbSession
-from app.documents.models import Document as DocumentsDocument
+from app.documents.models import Document
 from app.documents.text_extraction import extract_text_from_document
-from app.processing.models import Document, DocumentChunk
+from app.processing.models import ProcessingDocument, DocumentChunk
 from app.processing.schemas import (
     ChunkResponse,
     ProcessingStatusResponse,
@@ -30,12 +30,12 @@ async def _verify_document_ownership(
     document_id: UUID,
     user_id: UUID,
     db: AsyncSession,
-) -> DocumentsDocument:
+) -> Document:
     """Verify user owns the document. Returns the document or raises 404."""
     result = await db.execute(
-        select(DocumentsDocument).where(
-            DocumentsDocument.id == document_id,
-            DocumentsDocument.user_id == user_id,
+        select(Document).where(
+            Document.id == document_id,
+            Document.user_id == user_id,
         )
     )
     doc = result.scalar_one_or_none()
@@ -84,9 +84,7 @@ async def get_status(
     """Get processing status for a document."""
     await _verify_document_ownership(document_id, current_user.user_id, db)
 
-    from sqlalchemy import func
-
-    proc_doc = await db.scalar(select(Document).where(Document.id == document_id))
+    proc_doc = await db.scalar(select(ProcessingDocument).where(ProcessingDocument.id == document_id))
     if proc_doc is None:
         return ProcessingStatusResponse(
             document_id=document_id,

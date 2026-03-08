@@ -160,18 +160,6 @@ class Settings(BaseSettings):
     # Upload limits
     max_upload_size_mb: int = 10
 
-    # Frontend URL used for generated share links
-    web_base_url: str = Field(
-        default="http://localhost:3000",
-        validation_alias=AliasChoices(
-            "WEB_BASE_URL",
-            "web_base_url",
-            "NEXT_PUBLIC_WEB_BASE_URL",
-            "NEXT_PUBLIC_APP_URL",
-            "NEXT_PUBLIC_SITE_URL",
-        ),
-    )
-
 
 @lru_cache
 def get_settings() -> Settings:

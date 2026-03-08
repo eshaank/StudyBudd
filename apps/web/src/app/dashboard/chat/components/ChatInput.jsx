@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export default function ChatInput({ onSend, isLoading }) {
+const AVAILABLE_MODELS = [
+  { id: "Qwen/Qwen3.5-397B-A17B", name: "Qwen 3.5 397B" },
+  { id: "zai-org/GLM-5", name: "GLM-5" },
+  { id: "moonshotai/Kimi-K2.5", name: "Kimi K2.5" },
+];
+
+export default function ChatInput({ onSend, isLoading, selectedModel, onModelChange }) {
   const [input, setInput] = useState("");
   const [attached, setAttached] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,6 +43,19 @@ export default function ChatInput({ onSend, isLoading }) {
 
   return (
     <form onSubmit={handleSubmit} className="border-t border-slate-100 dark:border-slate-700 p-3 bg-white dark:bg-slate-800 shrink-0">
+      {/* Model selector */}
+      <div className="mb-2">
+        <select
+          value={selectedModel}
+          onChange={(e) => onModelChange(e.target.value)}
+          className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 cursor-pointer"
+        >
+          {AVAILABLE_MODELS.map((m) => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Attachment chips */}
       {attached.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">

@@ -1,18 +1,6 @@
-"""SQLAlchemy models for chat and conversations."""
+"""SQLAlchemy models for chat and conversations.
 
-# TODO: Add models:
-#
-# class Conversation:
-#     id: UUID
-#     user_id: UUID
-#     title: str
-#     created_at: datetime
-#     updated_at: datetime
-#
-# class Message:
-#     id: UUID
-#     conversation_id: UUID (FK)
-#     role: str ("user" | "assistant")
-#     content: str
-#     sources: JSON (list of chunk references)
-#     created_at: datetime
+Chat data (conversations, messages) currently lives in Supabase tables
+managed outside of Alembic.  This module is a placeholder for future
+migration to SQLAlchemy-managed tables.
+"""
