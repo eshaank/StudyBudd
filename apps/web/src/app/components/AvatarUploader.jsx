@@ -2,8 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createSupabaseBrowser } from "../../lib/supabase/client";
+import {
+  AVATAR_BUCKET,
+  emitProfileUpdated,
+  resolveProfileAvatarUrl,
+} from "../../lib/profile";
 
-const BUCKET = "avatars";
 const MAX_MB = 3;
 
 export default function AvatarUploader() {
@@ -34,11 +38,10 @@ export default function AvatarUploader() {
       const pathOrUrl = profile?.avatar_path || profile?.avatar_url || "";
       if (!pathOrUrl) return;
 
-      if (pathOrUrl.startsWith("http")) {
-        setAvatarUrl(pathOrUrl);
-      } else {
-        const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(pathOrUrl);
-        setAvatarUrl(pub?.publicUrl ? `${pub.publicUrl}?t=${Date.now()}` : "");
+      try {
+        setAvatarUrl(await resolveProfileAvatarUrl(supabase, pathOrUrl));
+      } catch (err) {
+        console.error("Avatar signed URL error:", err);
       }
     })();
   }, []);
@@ -67,7 +70,7 @@ export default function AvatarUploader() {
 
       // Upload to Storage
       const { error: upErr } = await supabase.storage
-        .from(BUCKET)
+        .from(AVATAR_BUCKET)
         .upload(path, file, {
           upsert: true,
           contentType: file.type,
@@ -76,9 +79,7 @@ export default function AvatarUploader() {
 
       if (upErr) throw upErr;
 
-      // ✅ Try writing avatar_path first; if column doesn't exist, fallback to avatar_url
-      let writeErr = null;
-
+      // Try writing avatar_path first; if column doesn't exist, fallback to avatar_url.
       const attempt1 = await supabase.from("profiles").upsert({
         id: user.id,
         avatar_path: path,
@@ -86,9 +87,7 @@ export default function AvatarUploader() {
       });
 
       if (attempt1.error) {
-        writeErr = attempt1.error;
-
-        // fallback (some schemas use avatar_url)
+        // Fallback for older schemas that still use avatar_url.
         const attempt2 = await supabase.from("profiles").upsert({
           id: user.id,
           avatar_url: path,
@@ -98,16 +97,15 @@ export default function AvatarUploader() {
         if (attempt2.error) throw attempt2.error;
       }
 
-      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const url = pub?.publicUrl ? `${pub.publicUrl}?t=${Date.now()}` : "";
-      setAvatarUrl(url);
+      setAvatarUrl(await resolveProfileAvatarUrl(supabase, path));
+      emitProfileUpdated();
     } catch (err) {
       console.error("Avatar upload error:", err);
       setErrorMsg(err?.message || "Upload failed. Check console.");
 
       // Helpful hint for common issues
       // - 403/permission denied => Storage RLS policy
-      // - bucket not found => create "avatars" bucket
+      // - signed URL failure => bucket or object path policy mismatch
     } finally {
       setUploading(false);
       e.target.value = "";

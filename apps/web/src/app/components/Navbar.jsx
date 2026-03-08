@@ -5,6 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowser } from "../../lib/supabase/client";
+import {
+  PROFILE_UPDATED_EVENT,
+  resolveProfileAvatarUrl,
+} from "../../lib/profile";
 import NotificationBell from "./NotificationBell";
 import { useTheme } from "./ThemeProvider";
 
@@ -36,6 +40,8 @@ export default function Navbar() {
   const router = useRouter();
 
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -43,21 +49,70 @@ export default function Navbar() {
   /* -------------------- Auth -------------------- */
   useEffect(() => {
     const supabase = createSupabaseBrowser();
+    let active = true;
 
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
-      setUser(data?.user ?? null);
-      setLoading(false);
+      const nextUser = data?.user ?? null;
+      if (!active) return;
+
+      setUser(nextUser);
+
+      if (!nextUser) {
+        setProfile(null);
+        setAvatarUrl("");
+        setLoading(false);
+        return;
+      }
+
+      const { data: nextProfile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", nextUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("Navbar profile load warning:", error);
+      }
+      if (!active) return;
+
+      setProfile(nextProfile ?? null);
+
+      const pathOrUrl = nextProfile?.avatar_path || nextProfile?.avatar_url || "";
+      if (!pathOrUrl) {
+        setAvatarUrl("");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setAvatarUrl(await resolveProfileAvatarUrl(supabase, pathOrUrl));
+      } catch (avatarErr) {
+        console.warn("Navbar avatar load warning:", avatarErr);
+        setAvatarUrl("");
+      } finally {
+        if (active) setLoading(false);
+      }
     }
 
     loadUser();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null);
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      loadUser();
       setMenuOpen(false);
     });
 
-    return () => sub?.subscription?.unsubscribe();
+    function handleProfileUpdated() {
+      loadUser();
+    }
+
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+
+    return () => {
+      active = false;
+      sub?.subscription?.unsubscribe();
+      window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+    };
   }, []);
 
   /* Close menu on route change */
@@ -87,9 +142,10 @@ export default function Navbar() {
 
   /* -------------------- Helpers -------------------- */
   const displayName = useMemo(() => {
+    if (profile?.full_name?.trim()) return profile.full_name.trim();
     if (!user?.email) return "Account";
     return user.email.split("@")[0];
-  }, [user]);
+  }, [profile, user]);
 
   async function signOut() {
     const supabase = createSupabaseBrowser();
@@ -176,7 +232,16 @@ export default function Navbar() {
                     title={user.email ?? "Account menu"}
                   >
                     <span className="account-trigger__avatar">
-                      {displayName?.[0]?.toUpperCase() ?? "U"}
+                      {avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={avatarUrl}
+                          alt={displayName || "Account avatar"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        displayName?.[0]?.toUpperCase() ?? "U"
+                      )}
                     </span>
 
                     <span className="account-trigger__name">

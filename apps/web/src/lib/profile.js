@@ -1,5 +1,41 @@
 import { createSupabaseBrowser } from "./supabase/client";
 
+export const AVATAR_BUCKET = "avatars";
+export const PROFILE_UPDATED_EVENT = "studybudd:profile-updated";
+
+const SIGNED_URL_TTL = 60 * 60;
+
+function extractAvatarStoragePath(pathOrUrl) {
+  if (!pathOrUrl?.startsWith("http")) return pathOrUrl || "";
+
+  const marker = `/${AVATAR_BUCKET}/`;
+  const markerIndex = pathOrUrl.indexOf(marker);
+  if (!pathOrUrl.includes("/storage/v1/object/") || markerIndex === -1) {
+    return "";
+  }
+
+  return decodeURIComponent(pathOrUrl.slice(markerIndex + marker.length).split("?")[0]);
+}
+
+export async function resolveProfileAvatarUrl(supabase, pathOrUrl) {
+  if (!pathOrUrl) return "";
+
+  const storagePath = extractAvatarStoragePath(pathOrUrl);
+  if (!storagePath && pathOrUrl.startsWith("http")) return pathOrUrl;
+
+  const { data, error } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .createSignedUrl(storagePath || pathOrUrl, SIGNED_URL_TTL);
+  if (error) throw error;
+  return data?.signedUrl || "";
+}
+
+export function emitProfileUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
+  }
+}
+
 export async function getMyProfile() {
   const supabase = createSupabaseBrowser();
 
@@ -11,7 +47,7 @@ export async function getMyProfile() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, full_name, avatar_url, updated_at")
+    .select("*")
     .eq("id", user.id)
     .maybeSingle();
 

@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowser } from "../../lib/supabase/client";
 
+const BUCKET = "avatars";
+const PROGRESS_FILE = "progress.json";
+
 function toDayKey(d) {
   return d.toLocaleDateString("en-CA"); // YYYY-MM-DD
 }
@@ -13,6 +16,84 @@ function startOfWeekSunday(date) {
   d.setDate(d.getDate() - day);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+function normalizeRows(rows) {
+  return (rows ?? []).map((row) => ({
+    day: row.day,
+    focus_minutes: Number(row.focus_minutes ?? 0),
+    focus_sessions: Number(row.focus_sessions ?? 0),
+  }));
+}
+
+function buildProgressPayload(rows) {
+  return {
+    updated_at: new Date().toISOString(),
+    days: normalizeRows(rows),
+  };
+}
+
+function buildHeatmapState(rows, alignedStart, end) {
+  const map = new Map(normalizeRows(rows).map((row) => [row.day, row.focus_minutes]));
+
+  const cells = [];
+  const cursor = new Date(alignedStart);
+  for (let i = 0; i < 371; i++) {
+    const day = toDayKey(cursor);
+    cells.push({ day, minutes: map.get(day) ?? 0, dow: cursor.getDay() });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  let streak = 0;
+  const back = new Date(end);
+  while (true) {
+    const day = toDayKey(back);
+    if ((map.get(day) ?? 0) > 0) {
+      streak++;
+      back.setDate(back.getDate() - 1);
+      continue;
+    }
+    break;
+  }
+
+  return { cells, streak };
+}
+
+async function downloadProgressRows(supabase, userId) {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .download(`${userId}/${PROGRESS_FILE}`);
+  if (error) throw error;
+
+  const text = await data.text();
+  const payload = JSON.parse(text);
+  return Array.isArray(payload?.days) ? normalizeRows(payload.days) : [];
+}
+
+async function queryProgressRows(supabase, userId, startKey, endKey) {
+  const { data, error } = await supabase
+    .from("productivity_days")
+    .select("day, focus_minutes, focus_sessions")
+    .eq("user_id", userId)
+    .gte("day", startKey)
+    .lte("day", endKey)
+    .order("day", { ascending: true });
+  if (error) throw error;
+  return normalizeRows(data);
+}
+
+async function uploadProgressSnapshot(supabase, userId, rows) {
+  const blob = new Blob([JSON.stringify(buildProgressPayload(rows))], {
+    type: "application/json",
+  });
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(`${userId}/${PROGRESS_FILE}`, blob, {
+      upsert: true,
+      contentType: "application/json",
+      cacheControl: "0",
+    });
+  if (error) throw error;
 }
 
 export default function ProductivityHeatmap() {
@@ -38,38 +119,25 @@ export default function ProductivityHeatmap() {
       const startKey = toDayKey(alignedStart);
       const endKey = toDayKey(end);
 
-      const { data: rows, error } = await supabase
-        .from("productivity_days")
-        .select("day, focus_minutes")
-        .eq("user_id", user.id)
-        .gte("day", startKey)
-        .lte("day", endKey);
-
-      if (error) console.warn("Heatmap query error:", error.message);
-
-      const map = new Map((rows ?? []).map((r) => [r.day, r.focus_minutes]));
-
-      const all = [];
-      const cursor = new Date(alignedStart);
-
-      for (let i = 0; i < 371; i++) {
-        const k = toDayKey(cursor);
-        all.push({ day: k, minutes: map.get(k) ?? 0, dow: cursor.getDay() });
-        cursor.setDate(cursor.getDate() + 1);
+      let rows;
+      try {
+        rows = await downloadProgressRows(supabase, user.id);
+      } catch (storageErr) {
+        console.warn("Heatmap storage load fallback:", storageErr?.message || storageErr);
+        rows = await queryProgressRows(supabase, user.id, startKey, endKey);
+        try {
+          await uploadProgressSnapshot(supabase, user.id, rows);
+        } catch (syncErr) {
+          console.warn("Heatmap storage backfill failed:", syncErr?.message || syncErr);
+        }
       }
 
-      setCells(all);
-
-      let s = 0;
-      const back = new Date(end);
-      while (true) {
-        const k = toDayKey(back);
-        if ((map.get(k) ?? 0) > 0) {
-          s++;
-          back.setDate(back.getDate() - 1);
-        } else break;
-      }
-      setStreak(s);
+      const inRangeRows = normalizeRows(rows).filter(
+        (row) => row.day >= startKey && row.day <= endKey
+      );
+      const nextState = buildHeatmapState(inRangeRows, alignedStart, end);
+      setCells(nextState.cells);
+      setStreak(nextState.streak);
     })();
   }, []);
 
