@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "../../lib/supabase/client";
+import { emitProfileUpdated } from "../../lib/profile";
 import AvatarUploader from "../components/AvatarUploader";
 import ProductivityHeatmap from "../components/ProductivityHeatmap";
 
@@ -111,6 +112,7 @@ export default function AccountPage() {
       if (error) throw error;
 
       setFullName(data?.full_name ?? "");
+      emitProfileUpdated();
       setNotice("Saved!");
     } catch (e) {
       const msg = formatSupabaseError(e);
@@ -146,7 +148,7 @@ export default function AccountPage() {
             <div className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-4">
               <AvatarUploader />
               <p className="mt-3 text-xs text-slate-500 dark:text-white/50">
-                Avatar stored in Supabase Storage (avatars bucket).
+                Avatar stored in private Supabase Storage (avatars bucket).
               </p>
             </div>
 
@@ -183,7 +185,9 @@ export default function AccountPage() {
                 {notice ? <span className="text-sm text-slate-700 dark:text-white/80">{notice}</span> : null}
               </div>
 
-              <p className="text-xs text-slate-500 dark:text-white/50">Profile data in Supabase (profiles table).</p>
+              <p className="text-xs text-slate-500 dark:text-white/50">
+                Profile data stays in Supabase tables. Avatar and productivity snapshot use private Storage.
+              </p>
             </div>
           </div>
         </div>
