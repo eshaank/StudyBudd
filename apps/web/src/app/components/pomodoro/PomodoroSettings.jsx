@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
+
 import ModeBtn from "./ModeBtn";
 import TimeInput from "./TimeInput";
 
@@ -11,8 +13,43 @@ export default function PomodoroSettings({
   mode, switchMode, cycleCount, resetTimer,
   showEditTimes, setShowEditTimes, isRunning,
   studyMinutes, shortBreakMinutes, longBreakMinutes, longBreakEvery,
-  setStudyMinutes, setShortBreakMinutes, setLongBreakMinutes, setLongBreakEvery,
+  applySettings,
 }) {
+  const [draft, setDraft] = useState({
+    studyMinutes,
+    shortBreakMinutes,
+    longBreakMinutes,
+    longBreakEvery,
+  });
+
+  useEffect(() => {
+    if (!showEditTimes) return;
+    setDraft({
+      studyMinutes,
+      shortBreakMinutes,
+      longBreakMinutes,
+      longBreakEvery,
+    });
+  }, [showEditTimes, studyMinutes, shortBreakMinutes, longBreakMinutes, longBreakEvery]);
+
+  const isDirty = useMemo(
+    () =>
+      draft.studyMinutes !== studyMinutes ||
+      draft.shortBreakMinutes !== shortBreakMinutes ||
+      draft.longBreakMinutes !== longBreakMinutes ||
+      draft.longBreakEvery !== longBreakEvery,
+    [draft, studyMinutes, shortBreakMinutes, longBreakMinutes, longBreakEvery]
+  );
+
+  function updateDraft(key, value) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleConfirm() {
+    applySettings(draft);
+    setShowEditTimes(false);
+  }
+
   return (
     <div className="border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 pb-3 pt-2.5 space-y-3">
       {/* Mode switcher */}
@@ -51,11 +88,22 @@ export default function PomodoroSettings({
         </button>
 
         {showEditTimes && (
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <TimeInput label="Focus" suffix="min" value={studyMinutes} min={1} max={180} disabled={isRunning} onChange={setStudyMinutes} />
-            <TimeInput label="Short break" suffix="min" value={shortBreakMinutes} min={1} max={60} disabled={isRunning} onChange={setShortBreakMinutes} />
-            <TimeInput label="Long break" suffix="min" value={longBreakMinutes} min={1} max={90} disabled={isRunning} onChange={setLongBreakMinutes} />
-            <TimeInput label="Every" suffix="sessions" value={longBreakEvery} min={2} max={10} disabled={isRunning} onChange={setLongBreakEvery} />
+          <div className="mt-2 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <TimeInput label="Focus" suffix="min" value={draft.studyMinutes} min={1} max={180} disabled={isRunning} onChange={(value) => updateDraft("studyMinutes", value)} />
+              <TimeInput label="Short break" suffix="min" value={draft.shortBreakMinutes} min={1} max={60} disabled={isRunning} onChange={(value) => updateDraft("shortBreakMinutes", value)} />
+              <TimeInput label="Long break" suffix="min" value={draft.longBreakMinutes} min={1} max={90} disabled={isRunning} onChange={(value) => updateDraft("longBreakMinutes", value)} />
+              <TimeInput label="Every" suffix="sessions" value={draft.longBreakEvery} min={2} max={10} disabled={isRunning} onChange={(value) => updateDraft("longBreakEvery", value)} />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={isRunning || !isDirty}
+              className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Confirm changes
+            </button>
           </div>
         )}
         {isRunning && showEditTimes && (

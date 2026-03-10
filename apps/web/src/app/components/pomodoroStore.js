@@ -13,6 +13,12 @@ function totalSecondsForMode(mode, studyM, shortM, longM) {
   return longM * 60;
 }
 
+function clampNumber(value, min, max, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+
 const STORAGE_KEY = "studybudd_pomodoro_v1";
 
 function safeLoad() {
@@ -229,6 +235,24 @@ export function usePomodoroStore() {
     setSecondsLeft(fresh);
   }
 
+  function applySettings(nextSettings) {
+    const nextStudy = clampNumber(nextSettings.studyMinutes, 1, 180, studyMinutes);
+    const nextShort = clampNumber(nextSettings.shortBreakMinutes, 1, 60, shortBreakMinutes);
+    const nextLong = clampNumber(nextSettings.longBreakMinutes, 1, 90, longBreakMinutes);
+    const nextEvery = clampNumber(nextSettings.longBreakEvery, 2, 10, longBreakEvery);
+
+    setIsRunning(false);
+    targetEndMsRef.current = null;
+
+    setStudyMinutes(nextStudy);
+    setShortBreakMinutes(nextShort);
+    setLongBreakMinutes(nextLong);
+    setLongBreakEvery(nextEvery);
+
+    const fresh = totalSecondsForMode(mode, nextStudy, nextShort, nextLong);
+    setSecondsLeft(fresh);
+  }
+
   const mm = Math.floor(secondsLeft / 60);
   const ss = secondsLeft % 60;
 
@@ -267,6 +291,7 @@ export function usePomodoroStore() {
     resetTimer,
     resetAll,
     switchMode,
+    applySettings,
     pad2,
   };
 }

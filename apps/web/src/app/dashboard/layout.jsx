@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FolderOpen, MessageSquare, Brain, Layers, ChevronRight } from "lucide-react";
 
-import { PomodoroProvider } from "../components/PomodoroProvider";
 import PomodoroSidebarCard from "../components/PomodoroSidebarCard";
 import { StudyAIPanelProvider, useStudyAIPanel } from "../components/StudyAIPanelProvider";
 import StudyAIPanel from "../../components/StudyAIPanel";
@@ -19,11 +18,9 @@ const NAV = [
 
 export default function DashboardLayout({ children }) {
   return (
-    <PomodoroProvider>
-      <StudyAIPanelProvider>
-        <DashboardLayoutInner>{children}</DashboardLayoutInner>
-      </StudyAIPanelProvider>
-    </PomodoroProvider>
+    <StudyAIPanelProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </StudyAIPanelProvider>
   );
 }
 

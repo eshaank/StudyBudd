@@ -231,13 +231,13 @@ export default function Navbar() {
                     }`}
                     title={user.email ?? "Account menu"}
                   >
-                    <span className="account-trigger__avatar">
+                    <span className="account-trigger__avatar inline-flex size-7 shrink-0 overflow-hidden rounded-full">
                       {avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={avatarUrl}
                           alt={displayName || "Account avatar"}
-                          className="h-full w-full object-cover"
+                          className="block size-full object-cover object-center"
                         />
                       ) : (
                         displayName?.[0]?.toUpperCase() ?? "U"
