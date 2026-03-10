@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Timer, FolderOpen, MessageSquare, Brain, Layers } from "lucide-react";
+import { PROFILE_UPDATED_EVENT } from "../../lib/profile";
 import { createSupabaseBrowser } from "../../lib/supabase/client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -44,6 +45,7 @@ function getGreeting() {
 export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState({
     chatCount: 0,
     fileCount: 0,
@@ -54,20 +56,37 @@ export default function DashboardHome() {
 
   useEffect(() => {
     const supabase = createSupabaseBrowser();
+    let active = true;
 
     async function load() {
       setLoading(true);
       const { data } = await supabase.auth.getUser();
       const u = data?.user ?? null;
+      if (!active) return;
       setUser(u);
 
       if (!u?.email) {
+        setProfile(null);
         setLoading(false);
         return;
       }
 
+      const { data: nextProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", u.id)
+        .maybeSingle();
+      if (profileError) {
+        console.warn("Dashboard profile load warning:", profileError);
+      }
+      if (!active) return;
+      setProfile(nextProfile ?? null);
+
       const token = await getAccessToken();
-      if (!token) { setLoading(false); return; }
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
       const [chats, docs, flashcardSets, quizSets] = await Promise.all([
         apiFetch("/api/chat/conversations", token),
@@ -75,6 +94,7 @@ export default function DashboardHome() {
         apiFetch("/api/flashcards/sets", token),
         apiFetch("/api/quizzes/sets", token),
       ]);
+      if (!active) return;
 
       const chatList = Array.isArray(chats) ? chats : [];
       const docList = Array.isArray(docs) ? docs : [];
@@ -144,18 +164,29 @@ export default function DashboardHome() {
 
     load();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      load();
     });
 
-    return () => sub?.subscription?.unsubscribe();
+    function handleProfileUpdated() {
+      load();
+    }
+
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+
+    return () => {
+      active = false;
+      sub?.subscription?.unsubscribe();
+      window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+    };
   }, []);
 
   const greeting = useMemo(() => getGreeting(), []);
   const displayName = useMemo(() => {
+    if (profile?.full_name?.trim()) return profile.full_name.trim();
     if (!user?.email) return "there";
     return user.email.split("@")[0];
-  }, [user]);
+  }, [profile, user]);
 
   return (
     <div className="space-y-10">

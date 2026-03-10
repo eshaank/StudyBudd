@@ -14,7 +14,7 @@ export default function PomodoroSidebarCard() {
   const {
     hydrated, studyMinutes, shortBreakMinutes, longBreakMinutes, longBreakEvery,
     mode, modeLabel, isRunning, cycleCount, mm, ss, ringPercent,
-    setStudyMinutes, setShortBreakMinutes, setLongBreakMinutes, setLongBreakEvery,
+    applySettings,
     start, pause, resetTimer, switchMode, pad2,
   } = usePomodoro();
 
@@ -94,10 +94,7 @@ export default function PomodoroSidebarCard() {
           shortBreakMinutes={shortBreakMinutes}
           longBreakMinutes={longBreakMinutes}
           longBreakEvery={longBreakEvery}
-          setStudyMinutes={setStudyMinutes}
-          setShortBreakMinutes={setShortBreakMinutes}
-          setLongBreakMinutes={setLongBreakMinutes}
-          setLongBreakEvery={setLongBreakEvery}
+          applySettings={applySettings}
         />
       )}
     </div>
