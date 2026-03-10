@@ -27,6 +27,7 @@ async def generate_quiz(
     return await QuizService.generate(
         db=db,
         user_id=current_user.user_id,
+        title=req.title,
         folder_id=req.folder_id,
         document_ids=req.document_ids,
         topic=req.topic,

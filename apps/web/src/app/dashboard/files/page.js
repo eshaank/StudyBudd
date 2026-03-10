@@ -116,8 +116,8 @@ export default function FilesPage() {
     if (error) setToastMessage(error);
   }, [query]);
 
-  const handleShareAction = useCallback(() => {
-    const msg = share.handleShare();
+  const handleShareAction = useCallback(async () => {
+    const msg = await share.handleShare();
     if (msg) setToastMessage(msg);
   }, [share]);
 
@@ -276,6 +276,10 @@ export default function FilesPage() {
           shareRecipients={share.shareRecipients}
           shareSuggestions={share.shareSuggestions}
           copyLinkDone={share.copyLinkDone}
+          copyLinkLoading={share.copyLinkLoading}
+          shareLink={share.shareLink}
+          isSharing={share.isSharing}
+          shareError={share.shareError}
           shareInputRef={share.shareInputRef}
           onAddRecipient={share.addRecipient}
           onRemoveRecipient={share.removeRecipient}

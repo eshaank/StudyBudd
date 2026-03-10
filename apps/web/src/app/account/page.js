@@ -147,9 +147,6 @@ export default function AccountPage() {
           <div className="grid gap-6 sm:grid-cols-[220px_1fr] items-start">
             <div className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-4">
               <AvatarUploader />
-              <p className="mt-3 text-xs text-slate-500 dark:text-white/50">
-                Avatar stored in private Supabase Storage (avatars bucket).
-              </p>
             </div>
 
             <div className="space-y-4">

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { useStudyAIPanel } from "../app/components/StudyAIPanelProvider";
 
 /**
@@ -343,7 +342,7 @@ export default function StudyAIPanel({ accentColor = "#6366f1" }) {
                           ))}
                         </div>
                       ) : (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                        <ReactMarkdown components={mdComponents}>
                           {msg.content}
                         </ReactMarkdown>
                       )}

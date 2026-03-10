@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "../../../../lib/api";
 import { DEMO_USERS } from "../../../../constants/files";
 
 export default function useShareModal({ addNotification }) {
@@ -7,6 +8,10 @@ export default function useShareModal({ addNotification }) {
   const [shareRecipients, setShareRecipients] = useState([]);
   const [shareSuggestions, setShareSuggestions] = useState([]);
   const [copyLinkDone, setCopyLinkDone] = useState(false);
+  const [copyLinkLoading, setCopyLinkLoading] = useState(false);
+  const [shareLink, setShareLink] = useState(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareError, setShareError] = useState(null);
   const shareInputRef = useRef(null);
 
   useEffect(() => {
@@ -28,6 +33,10 @@ export default function useShareModal({ addNotification }) {
     setShareRecipients([]);
     setShareSuggestions([]);
     setCopyLinkDone(false);
+    setCopyLinkLoading(false);
+    setShareLink(null);
+    setIsSharing(false);
+    setShareError(null);
   }, []);
 
   const close = useCallback(() => setShareDoc(null), []);
@@ -62,23 +71,57 @@ export default function useShareModal({ addNotification }) {
     }
   }, [addEmailAsRecipient, shareEmail, shareRecipients, removeRecipient]);
 
-  const handleCopyLink = useCallback(() => {
-    const link = `${window.location.origin}/dashboard/files/${shareDoc?.id ?? "shared"}`;
-    navigator.clipboard.writeText(link).catch(() => {});
-    setCopyLinkDone(true);
-    setTimeout(() => setCopyLinkDone(false), 2500);
-  }, [shareDoc]);
+  const handleCopyLink = useCallback(async () => {
+    if (!shareDoc) return;
 
-  const handleShare = useCallback(() => {
-    if (shareRecipients.length === 0) return;
-    shareRecipients.forEach((r) => {
-      const msg = `Hey @${r.name} received the files. "${shareDoc?.original_filename || "file"}" was shared with you.`;
-      addNotification(msg);
-    });
-    const count = shareRecipients.length;
-    setShareDoc(null);
-    return `Shared with ${count} person${count > 1 ? "s" : ""}.`;
-  }, [shareRecipients, shareDoc, addNotification]);
+    // Already generated — just copy again without a new API call.
+    if (shareLink) {
+      navigator.clipboard.writeText(shareLink).catch(() => {});
+      setCopyLinkDone(true);
+      setTimeout(() => setCopyLinkDone(false), 2500);
+      return;
+    }
+
+    setCopyLinkLoading(true);
+    setShareError(null);
+    try {
+      const data = await api.post(`/api/documents/${shareDoc.id}/share-links`, {
+        recipient_emails: [],
+      });
+      setShareLink(data.share_url);
+      navigator.clipboard.writeText(data.share_url).catch(() => {});
+      setCopyLinkDone(true);
+      setTimeout(() => setCopyLinkDone(false), 2500);
+    } catch {
+      setShareError("Failed to generate share link. Please try again.");
+    } finally {
+      setCopyLinkLoading(false);
+    }
+  }, [shareDoc, shareLink]);
+
+  const handleShare = useCallback(async () => {
+    if (shareRecipients.length === 0 || !shareDoc) return;
+
+    setIsSharing(true);
+    setShareError(null);
+    try {
+      await api.post(`/api/documents/${shareDoc.id}/share-links`, {
+        recipient_emails: shareRecipients.map((r) => r.email),
+      });
+      shareRecipients.forEach((r) => {
+        addNotification(
+          `"${shareDoc.original_filename || "file"}" was shared with ${r.name}.`
+        );
+      });
+      const count = shareRecipients.length;
+      setShareDoc(null);
+      return `Shared with ${count} person${count > 1 ? "s" : ""}.`;
+    } catch {
+      setShareError("Failed to share document. Please try again.");
+    } finally {
+      setIsSharing(false);
+    }
+  }, [shareDoc, shareRecipients, addNotification]);
 
   return {
     shareDoc,
@@ -87,6 +130,10 @@ export default function useShareModal({ addNotification }) {
     shareRecipients,
     shareSuggestions,
     copyLinkDone,
+    copyLinkLoading,
+    shareLink,
+    isSharing,
+    shareError,
     shareInputRef,
     open,
     close,

@@ -26,6 +26,7 @@ class QuizService:
         db: AsyncSession,
         user_id: UUID,
         *,
+        title: str | None = None,
         folder_id: UUID | None = None,
         document_ids: list[UUID] | None = None,
         topic: str | None = None,
@@ -75,11 +76,11 @@ class QuizService:
             )
 
         source_doc_ids = list({str(c.document_id) for c in retrieve.context_chunks})
-        title = topic or "Quiz"
+        set_title = title or topic or "Quiz"
 
         quiz_set = QuizSet(
             user_id=user_id,
-            title=title,
+            title=set_title,
             description=f"Generated from {len(source_doc_ids)} document(s)",
             folder_id=folder_id,
             document_ids=source_doc_ids,

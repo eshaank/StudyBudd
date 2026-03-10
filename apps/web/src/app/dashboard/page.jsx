@@ -181,6 +181,21 @@ export default function DashboardHome() {
     };
   }, []);
 
+  useEffect(() => {
+    function handleProfileUpdated() {
+      const supabase = createSupabaseBrowser();
+      if (!user?.id) return;
+      supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle()
+        .then(({ data }) => setProfile(data ?? null));
+    }
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+  }, [user?.id]);
+
   const greeting = useMemo(() => getGreeting(), []);
   const displayName = useMemo(() => {
     if (profile?.full_name?.trim()) return profile.full_name.trim();
