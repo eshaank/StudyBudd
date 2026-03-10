@@ -12,7 +12,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.supabase import delete_file, upload_file
+from app.core.supabase import delete_file, download_file, upload_file
 from app.documents.models import Document, DocumentShare, DocumentShareRecipient
 from app.processing.models import ProcessingDocument
 
@@ -314,6 +314,52 @@ class DocumentService:
         recipient_emails = list(recipient_rows)
 
         return share, document, recipient_emails
+
+    @staticmethod
+    async def import_shared_document(
+        db: AsyncSession,
+        document: Document,
+        recipient_user_id: UUID,
+    ) -> Document:
+        """Copy a shared document into a recipient's own library.
+
+        Downloads the file from Supabase Storage, re-uploads it under the
+        recipient's user_id, and creates a new Document record for them.
+
+        Args:
+            db: Database session.
+            document: The source document to copy.
+            recipient_user_id: ID of the user importing the document.
+
+        Returns:
+            The newly created Document entity owned by the recipient.
+        """
+        content = download_file(document.storage_path)
+        new_storage_path = await upload_file(
+            content=content,
+            user_id=recipient_user_id,
+            filename=document.original_filename,
+            content_type=document.mime_type,
+        )
+        new_doc = Document(
+            user_id=recipient_user_id,
+            filename=new_storage_path.split("/")[-1],
+            original_filename=document.original_filename,
+            file_type=document.file_type,
+            mime_type=document.mime_type,
+            file_size=document.file_size,
+            storage_path=new_storage_path,
+        )
+        db.add(new_doc)
+        await db.commit()
+        await db.refresh(new_doc)
+        logger.info(
+            "document imported from share document_id=%s → new_document_id=%s recipient_user_id=%s",
+            document.id,
+            new_doc.id,
+            recipient_user_id,
+        )
+        return new_doc
 
     @staticmethod
     def verify_share_access(

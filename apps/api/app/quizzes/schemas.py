@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class QuizGenerateRequest(BaseModel):
     """Request body for generating a new quiz set."""
 
+    title: str | None = Field(None, max_length=255)
     folder_id: UUID | None = None
     document_ids: list[UUID] | None = None
     topic: str | None = Field(None, max_length=500)

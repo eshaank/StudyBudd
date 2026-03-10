@@ -12,8 +12,10 @@ import logging
 import re
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.documents.models import Document
 from app.processing.service import ProcessingService
 
 logger = logging.getLogger(__name__)
@@ -102,6 +104,7 @@ Document search:
 - Use a clear, focused search query (e.g. a topic, question, or key phrase).
 - If the tool returns no relevant content, answer from general knowledge and say so.
 - When referencing retrieved content, mention that it came from the user's documents.
+- When telling the user which documents to review, always use the document name (e.g. the filename shown in the context), never the document ID.
 """
 
 SEARCH_TOOL_SCHEMA: dict = {
@@ -140,8 +143,12 @@ async def execute_search(
 ) -> tuple[str, list[dict]]:
     """Run RAG retrieval and return ``(context_text, sources)``.
 
-    *sources* is a list of dicts with ``document_id``, ``chunk_index``, and
-    ``preview`` — the same shape the frontend already expects.
+    Resolves document IDs to display names (original_filename) so the model
+    and frontend can show document names instead of IDs. Context text uses
+    names (e.g. "[Doc: filename.pdf | Chunk 0]") so the model cites names.
+
+    *sources* is a list of dicts with ``document_id``, ``document_name``,
+    ``chunk_index``, and ``preview``.
     """
     logger.info("RAG search user_id=%s query=%r", user_id, query)
 
@@ -161,6 +168,24 @@ async def execute_search(
             [],
         )
 
+    # Resolve document IDs to display names (original_filename) for model and frontend
+    unique_doc_ids = list({c.document_id for c in retrieve.context_chunks})
+    stmt = select(Document.id, Document.original_filename).where(
+        Document.id.in_(unique_doc_ids),
+        Document.user_id == user_id,
+    )
+    result = await db.execute(stmt)
+    doc_id_to_name: dict[UUID, str] = {
+        row[0]: (row[1] or "Untitled") for row in result.all()
+    }
+
+    # Build context text with document names so the model cites names, not IDs
+    context_parts = []
+    for c in retrieve.context_chunks:
+        name = doc_id_to_name.get(c.document_id) or "Untitled"
+        context_parts.append(f"[Doc: {name} | Chunk {c.chunk_index}]\n{c.content}")
+    context_text = "\n\n---\n\n".join(context_parts)
+
     sources: list[dict] = []
     seen_doc_ids: set[str] = set()
     for chunk in retrieve.context_chunks:
@@ -169,6 +194,7 @@ async def execute_search(
             sources.append(
                 {
                     "document_id": doc_id_str,
+                    "document_name": doc_id_to_name.get(chunk.document_id) or "Untitled",
                     "chunk_index": chunk.chunk_index,
                     "preview": chunk.content[:120],
                 }
@@ -176,4 +202,4 @@ async def execute_search(
             seen_doc_ids.add(doc_id_str)
 
     logger.info("RAG search returned %d chunks for query=%r", len(retrieve.context_chunks), query)
-    return retrieve.context_text, sources
+    return context_text, sources

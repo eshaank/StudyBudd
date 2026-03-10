@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Timer, FolderOpen, MessageSquare, Brain, Layers } from "lucide-react";
 import { createSupabaseBrowser } from "../../lib/supabase/client";
+import { PROFILE_UPDATED_EVENT } from "../../lib/profile";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -44,6 +45,7 @@ function getGreeting() {
 export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState({
     chatCount: 0,
     fileCount: 0,
@@ -65,6 +67,13 @@ export default function DashboardHome() {
         setLoading(false);
         return;
       }
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", u.id)
+        .maybeSingle();
+      setProfile(profileData ?? null);
 
       const token = await getAccessToken();
       if (!token) { setLoading(false); return; }
@@ -151,11 +160,28 @@ export default function DashboardHome() {
     return () => sub?.subscription?.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    function handleProfileUpdated() {
+      const supabase = createSupabaseBrowser();
+      if (!user?.id) return;
+      supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle()
+        .then(({ data }) => setProfile(data ?? null));
+    }
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+  }, [user?.id]);
+
   const greeting = useMemo(() => getGreeting(), []);
   const displayName = useMemo(() => {
-    if (!user?.email) return "there";
-    return user.email.split("@")[0];
-  }, [user]);
+    const name = profile?.full_name?.trim();
+    if (name) return name;
+    if (user?.email) return user.email.split("@")[0];
+    return "there";
+  }, [user, profile]);
 
   return (
     <div className="space-y-10">

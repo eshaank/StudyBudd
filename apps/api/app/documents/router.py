@@ -222,6 +222,84 @@ async def download_shared_document(
     )
 
 
+@router.post("/shared/{share_token}/import", response_model=DocumentUploadResponse)
+async def import_shared_document(
+    share_token: str,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> DocumentUploadResponse:
+    """Import a shared document into the current user's file library.
+
+    Downloads the source file and creates a new copy owned by the current user,
+    then indexes it for RAG if the file type supports it.
+    """
+    shared = await DocumentService.get_share_by_token(db, share_token)
+    if shared is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Share link not found",
+        )
+
+    share, document, recipients = shared
+    DocumentService.verify_share_access(
+        share=share,
+        recipient_emails=recipients,
+        current_user_id=current_user.user_id,
+        current_user_email=current_user.email,
+    )
+
+    if document.user_id == current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You already own this document.",
+        )
+
+    new_doc = await DocumentService.import_shared_document(
+        db=db,
+        document=document,
+        recipient_user_id=current_user.user_id,
+    )
+
+    processing_status: str | None = None
+    chunks_count: int | None = None
+    processing_error: str | None = None
+
+    if new_doc.file_type in ("text", "csv", "pdf"):
+        try:
+            text = extract_text_from_document(new_doc)
+            result = await ProcessingService.process_document(
+                db=db,
+                document_id=new_doc.id,
+                title=new_doc.original_filename or "untitled",
+                text=text,
+            )
+            processing_status = result.status
+            chunks_count = result.chunks_count
+            processing_error = result.error
+        except ValueError as e:
+            processing_status = "error"
+            processing_error = str(e)
+        except HTTPException as e:
+            processing_status = "error"
+            processing_error = e.detail or "Embedding failed."
+    else:
+        processing_status = "unsupported"
+
+    logger.info(
+        "shared document imported user_id=%s share_token=%s new_document_id=%s",
+        current_user.user_id,
+        share_token,
+        new_doc.id,
+    )
+    return DocumentUploadResponse(
+        message="Document saved to your library.",
+        document=DocumentResponse.model_validate(new_doc),
+        processing_status=processing_status,
+        chunks_count=chunks_count,
+        processing_error=processing_error,
+    )
+
+
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: UUID,

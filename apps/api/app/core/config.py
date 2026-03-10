@@ -157,6 +157,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("TOGETHER_EMBED_MODEL", "together_embed_model")
     )
 
+    # Frontend base URL (used to build shareable links)
+    web_base_url: str = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("WEB_BASE_URL", "web_base_url"),
+    )
+
     # Upload limits
     max_upload_size_mb: int = 10
 

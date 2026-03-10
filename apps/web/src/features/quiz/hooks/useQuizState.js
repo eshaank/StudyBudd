@@ -109,9 +109,10 @@ export function useQuizState() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSetId, fetchQuiz]);
 
-  async function handleGenerate({ folderId, topic, numQuestions }) {
+  async function handleGenerate({ title, folderId, topic, numQuestions }) {
     const token = await getAccessToken();
     const body = { num_questions: numQuestions };
+    if (title?.trim()) body.title = title.trim();
     if (folderId) body.folder_id = folderId;
     if (topic?.trim()) body.topic = topic.trim();
 
