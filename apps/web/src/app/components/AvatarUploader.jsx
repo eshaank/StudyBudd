@@ -9,6 +9,68 @@ import {
 } from "../../lib/profile";
 
 const MAX_MB = 3;
+const AVATAR_SIZE_PX = 512;
+
+async function normalizeAvatarFile(file) {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () => reject(new Error("Could not read the selected image."));
+      nextImage.src = objectUrl;
+    });
+
+    const sourceWidth = image.naturalWidth || image.width;
+    const sourceHeight = image.naturalHeight || image.height;
+    const cropSize = Math.min(sourceWidth, sourceHeight);
+
+    if (!cropSize) {
+      throw new Error("Invalid image dimensions.");
+    }
+
+    const targetSize = Math.min(AVATAR_SIZE_PX, cropSize);
+    const canvas = document.createElement("canvas");
+    canvas.width = targetSize;
+    canvas.height = targetSize;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Avatar processing is not available in this browser.");
+    }
+
+    const offsetX = Math.max(0, (sourceWidth - cropSize) / 2);
+    const offsetY = Math.max(0, (sourceHeight - cropSize) / 2);
+
+    ctx.clearRect(0, 0, targetSize, targetSize);
+    ctx.drawImage(
+      image,
+      offsetX,
+      offsetY,
+      cropSize,
+      cropSize,
+      0,
+      0,
+      targetSize,
+      targetSize
+    );
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (nextBlob) => {
+          if (nextBlob) resolve(nextBlob);
+          else reject(new Error("Failed to process avatar image."));
+        },
+        "image/png"
+      );
+    });
+
+    return new File([blob], "avatar.png", { type: "image/png" });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 export default function AvatarUploader() {
   const supabase = createSupabaseBrowser();
@@ -65,15 +127,15 @@ export default function AvatarUploader() {
     setUploading(true);
 
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-      const path = `${user.id}/avatar.${ext}`;
+      const processedFile = await normalizeAvatarFile(file);
+      const path = `${user.id}/avatar.png`;
 
       // Upload to Storage
       const { error: upErr } = await supabase.storage
         .from(AVATAR_BUCKET)
-        .upload(path, file, {
+        .upload(path, processedFile, {
           upsert: true,
-          contentType: file.type,
+          contentType: processedFile.type,
           cacheControl: "3600",
         });
 
@@ -143,7 +205,7 @@ export default function AvatarUploader() {
           />
 
           <p className="mt-2 text-xs text-white/50">
-            PNG/JPG up to {MAX_MB}MB • Stored in Supabase Storage
+            PNG/JPG up to {MAX_MB}MB • Center-cropped and capped at {AVATAR_SIZE_PX}px • Stored in Supabase Storage
           </p>
 
           {errorMsg ? (
