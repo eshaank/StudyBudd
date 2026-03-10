@@ -182,31 +182,37 @@ class ChatService:
         """
         model_name = self._resolve_model(request)
         conversation_id = request.conversation_id
+        ephemeral = request.ephemeral
 
-        # 1. Create conversation if needed
-        if not conversation_id:
-            new_conv = await self.create_conversation(
-                user_id, title=request.message[:50]
-            )
-            conversation_id = new_conv["id"]
+        # 1. Create conversation if needed (skip for ephemeral chats)
+        _supabase = None
+        if not ephemeral:
+            if not conversation_id:
+                new_conv = await self.create_conversation(
+                    user_id, title=request.message[:50]
+                )
+                conversation_id = new_conv["id"]
 
-        # 2. Save user message
-        _supabase = get_supabase_client()
-        await asyncio.to_thread(
-            _supabase.table("messages")
-            .insert(
-                {
-                    "conversation_id": conversation_id,
-                    "role": "user",
-                    "content": request.message,
-                }
+            # 2. Save user message
+            _supabase = get_supabase_client()
+            await asyncio.to_thread(
+                _supabase.table("messages")
+                .insert(
+                    {
+                        "conversation_id": conversation_id,
+                        "role": "user",
+                        "content": request.message,
+                    }
+                )
+                .execute
             )
-            .execute
-        )
 
         # 3. Build messages array: system + history + user
-        raw_history = await self._build_history(conversation_id)
-        history_without_latest = raw_history[:-1] if raw_history else []
+        if not ephemeral and conversation_id:
+            raw_history = await self._build_history(conversation_id)
+            history_without_latest = raw_history[:-1] if raw_history else []
+        else:
+            history_without_latest = []
 
         messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
         messages.extend(history_without_latest)
@@ -360,9 +366,26 @@ class ChatService:
             yield f"event: token\ndata: {fallback}\n\n"
 
         logger.info(
-            "chat stream completed conversation_id=%s response_len=%d sources=%d",
-            conversation_id, len(accumulated_text), len(sources),
+            "chat stream completed conversation_id=%s ephemeral=%s response_len=%d sources=%d",
+            conversation_id, ephemeral, len(accumulated_text), len(sources),
         )
+
+        if ephemeral:
+            # Ephemeral chats skip all DB writes — emit done with synthetic ID
+            done_payload = json.dumps(
+                {
+                    "conversation_id": None,
+                    "message": {
+                        "id": f"ephemeral-{int(datetime.utcnow().timestamp() * 1000)}",
+                        "role": "assistant",
+                        "content": accumulated_text,
+                        "created_at": datetime.utcnow().isoformat(),
+                        "sources": sources,
+                    },
+                }
+            )
+            yield f"event: done\ndata: {done_payload}\n\n"
+            return
 
         # 7. Save complete AI message
         ai_msg_data = {

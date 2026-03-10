@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
     model: Optional[str] = None
+    ephemeral: bool = False
 
 
 class MessageResponse(BaseModel):
@@ -41,6 +42,20 @@ class ConversationUpdate(BaseModel):
     """Schema for updating a conversation (e.g. rename)."""
 
     title: str
+
+
+class SaveMessageItem(BaseModel):
+    """A single message in a save-conversation request."""
+
+    role: str
+    content: str
+
+
+class SaveConversationRequest(BaseModel):
+    """Schema for saving an ephemeral Ask AI chat to a real conversation."""
+
+    title: str
+    messages: List[SaveMessageItem]
 
 
 class ChatResponse(BaseModel):

@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.dependencies import CurrentUser, DbSession
 from app.core.supabase import get_supabase_client
-from .schemas import ChatRequest, ChatResponse, ConversationResponse, ConversationUpdate, MessageResponse
+from .schemas import ChatRequest, ChatResponse, ConversationResponse, ConversationUpdate, MessageResponse, SaveConversationRequest
 from .service import ChatService
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,31 @@ async def chat_stream(request: ChatRequest, user: CurrentUser, db: DbSession):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/conversations/save")
+async def save_conversation(body: SaveConversationRequest, user: CurrentUser):
+    """Save an ephemeral Ask AI chat as a real conversation with messages."""
+    supabase = get_supabase_client()
+    user_id = str(user.user_id)
+    logger.info("save_conversation user_id=%s title=%s msgs=%d", user_id, body.title, len(body.messages))
+
+    # Create conversation
+    conv_res = supabase.table("conversations").insert({
+        "user_id": user_id,
+        "title": body.title[:50] or "Ask AI Chat",
+    }).execute()
+    conversation_id = conv_res.data[0]["id"]
+
+    # Bulk insert messages
+    rows = [
+        {"conversation_id": conversation_id, "role": m.role, "content": m.content}
+        for m in body.messages
+    ]
+    if rows:
+        supabase.table("messages").insert(rows).execute()
+
+    return {"conversation_id": conversation_id}
 
 
 @router.get("/conversations", response_model=List[ConversationResponse])
