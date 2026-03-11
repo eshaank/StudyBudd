@@ -1,23 +1,42 @@
 # StudyBudd Documentation
 
-This folder contains documentation for the StudyBudd application.
+This folder contains documentation for the StudyBudd application. See [DOCS-STRUCTURE.md](./DOCS-STRUCTURE.md) for the full layout and conventions.
 
-## Contents
+## Overview
 
-- [Development Setup](./development-setup.md) - How to set up your local development environment
-- [Authentication](./authentication.md) - How authentication works and dev mode bypass
-- [Document Upload](./document-upload.md) - How the document upload feature works
-- [Chat Streaming](./chat-streaming.md) - How streaming works from browser to Together AI
-- [Document Sharing](./document-sharing.md) - Share links and access control flow
-- [Document Sharing (ZH)](./document-sharing-implementation-zh.md) - Detailed Chinese implementation guide
-- [Chat & Profile / Account Summary (ZH)](./chat-profile-account-summary-zh.md) - 中文版：Chat + Profile / Account 总结
-- [Chat & Profile / Account Summary (EN)](./chat-profile-account-summary-en.md) - English version: Chat + Profile / Account summary
-- [Account Avatar / Progress Storage Plan (ZH)](./account-avatar-progress-storage-plan-zh.md) - Account 页面头像与进度存储改造方案
+- [System Overview & Architecture](./overview/system-overview-and-architecture.md) — Product and technical architecture (Mermaid diagrams)
+- [Development Setup](./overview/development-setup.md) — Local development environment
+
+## Backend
+
+- [API Onboarding](./backend/api-onboarding.md) — Map of API structure, auth, RAG, storage
+- [Authentication](./backend/auth/authentication.md) — Auth flow and dev bypass
+- [Chat Streaming](./backend/chat/chat-streaming.md) — SSE streaming from browser to Together AI
+- [Chat & Profile / Account Summary (EN)](./backend/chat/chat-profile-account-summary-en.md) | [(ZH)](./backend/chat/chat-profile-account-summary-zh.md)
+- [Document Upload](./backend/documents/document-upload.md) — Upload and processing flow
+- [Document Sharing](./backend/document_sharing/document-sharing.md) — Share links and access control
+- [Document Sharing Implementation (ZH)](./backend/document_sharing/document-sharing-implementation-zh.md)
+- [RAG Setup](./backend/processing/rag-setup.md) — Embeddings and pgvector
+- [RAG Flow](./backend/processing/rag-flow.md) — Pipeline and retrieval
+- [RAG Pipeline Diagram](./backend/processing/rag-pipeline-diagram.md)
+
+## Frontend
+
+- [Architecture](./frontend/frontend-architecture.md)
+- [Dashboard](./frontend/frontend-dashboard.md)
+- [Overall Design](./frontend/frontend-overall-design.md)
+- [Refactoring Plan](./frontend/frontend-refactoring-plan.md)
+- [Pomodoro, Flashcards, Quizzes](./frontend/frontend-pomodoro-flashcards-quizzes.md)
+- [Account Avatar / Progress Storage Plan (ZH)](./frontend/account/account-avatar-progress-storage-plan-zh.md)
+
+## Testing
+
+- [Playwright Testing Guide](./testing/playwright-testing-guide.md)
 
 ## Quick Start
 
-1. Copy the environment variables template to `.env` in the project root
+1. Copy `env.example` to `.env` in the project root
 2. Set `DEBUG=true` for development mode
 3. Start the backend: `cd apps/api && uvicorn app.main:app --reload --port 8000`
 4. Start the frontend: `cd apps/web && npm run dev`
-5. Visit `http://localhost:3000`
+5. Visit http://localhost:3000

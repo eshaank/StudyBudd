@@ -386,4 +386,4 @@ Same pattern: **router** → **service** → **models/schemas**; auth via `Curre
 
 ---
 
-You now have a single-doc map of **how the API is structured**, **how chat and RAG work**, and **where to look** for auth, documents, and storage. For deeper dives, see `docs/rag-flow.md`, `docs/chat-streaming.md`, and `docs/document-upload.md`.
+You now have a single-doc map of **how the API is structured**, **how chat and RAG work**, and **where to look** for auth, documents, and storage. For deeper dives, see `docs/backend/processing/rag-flow.md`, `docs/backend/chat/chat-streaming.md`, and `docs/backend/documents/document-upload.md`.
