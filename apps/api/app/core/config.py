@@ -134,6 +134,10 @@ class Settings(BaseSettings):
     supabase_service_key: str = ""
     supabase_jwt_secret: str = ""
     supabase_storage_bucket: str = "documents"
+    web_base_url: str = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("WEB_BASE_URL", "web_base_url"),
+    )
 
     # Together AI
     together_api_key: str = Field(

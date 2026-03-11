@@ -37,10 +37,8 @@ function safeSave(state) {
 }
 
 export function usePomodoroStore() {
-  // ✅ IMPORTANT: do NOT read localStorage during render (SSR hydration mismatch)
   const [hydrated, setHydrated] = useState(false);
 
-  // Defaults (SSR-safe)
   const [studyMinutes, setStudyMinutes] = useState(25);
   const [shortBreakMinutes, setShortBreakMinutes] = useState(5);
   const [longBreakMinutes, setLongBreakMinutes] = useState(15);
@@ -56,7 +54,6 @@ export function usePomodoroStore() {
 
   const targetEndMsRef = useRef(null);
 
-  // ✅ Hydrate from localStorage after mount
   useEffect(() => {
     const persisted = safeLoad();
     if (!persisted) {
@@ -82,7 +79,6 @@ export function usePomodoroStore() {
     setIsRunning(nextRunning);
     setCycleCount(nextCycle);
 
-    // restore timer
     const now = Date.now();
     const targetEnd = persisted.targetEndMs ?? null;
 
@@ -101,7 +97,6 @@ export function usePomodoroStore() {
     setHydrated(true);
   }, []);
 
-  // Persist (after hydration so we don’t overwrite storage with defaults)
   useEffect(() => {
     if (!hydrated) return;
 
@@ -128,7 +123,6 @@ export function usePomodoroStore() {
     secondsLeft,
   ]);
 
-  // Keep secondsLeft in sync when paused and editing durations
   useEffect(() => {
     const newTotal = totalSecondsForMode(mode, studyMinutes, shortBreakMinutes, longBreakMinutes);
     if (!isRunning) {
@@ -139,7 +133,6 @@ export function usePomodoroStore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, studyMinutes, shortBreakMinutes, longBreakMinutes]);
 
-  // Tick using targetEndMs so route changes don't matter
   useEffect(() => {
     if (!isRunning) return;
 
@@ -156,7 +149,6 @@ export function usePomodoroStore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning]);
 
-  // Auto advance when hit 0
   useEffect(() => {
     if (secondsLeft !== 0) return;
 
@@ -193,7 +185,6 @@ export function usePomodoroStore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft]);
 
-  // Actions
   function start() {
     const fresh =
       secondsLeft === 0
