@@ -1,4 +1,4 @@
-"""System prompts for the StudyBudd AI assistant."""
+"""Prompt templates for AI content generation."""
 
 SYSTEM_PROMPT = """You are StudyBudd, a friendly and knowledgeable AI study assistant.
 

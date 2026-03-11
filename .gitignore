@@ -49,8 +49,6 @@ postgres_data/
 # IDE
 .vscode/
 .idea/
-.cursor/
-
 
 # Playwright
 /test-results/
@@ -59,8 +57,4 @@ postgres_data/
 /playwright/.cache/
 /playwright/.auth/
 
-# Claude / Agents
-.claude/
-.agents/
-CLAUDE.md
 

@@ -1,4 +1,4 @@
-"""Business logic for quiz generation and CRUD."""
+"""Quiz generation from documents using LLM prompting."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class QuizService:
-    """Service for generating, listing, and managing quiz sets."""
+    """Manages quiz generation and retrieval."""
 
     @staticmethod
     async def generate(
@@ -111,7 +111,6 @@ class QuizService:
 
     @staticmethod
     async def list_sets(db: AsyncSession, user_id: UUID) -> list[QuizSetSummary]:
-        """Return all quiz sets for a user (lightweight, no questions)."""
         stmt = (
             select(
                 QuizSet,
@@ -138,7 +137,6 @@ class QuizService:
 
     @staticmethod
     async def get_set(db: AsyncSession, user_id: UUID, set_id: UUID) -> QuizSetResponse:
-        """Get a single quiz set with all questions."""
         qset = await db.scalar(
             select(QuizSet).where(
                 QuizSet.id == set_id,
@@ -151,7 +149,6 @@ class QuizService:
 
     @staticmethod
     async def delete_set(db: AsyncSession, user_id: UUID, set_id: UUID) -> None:
-        """Delete a quiz set (questions cascade)."""
         qset = await db.scalar(
             select(QuizSet).where(
                 QuizSet.id == set_id,

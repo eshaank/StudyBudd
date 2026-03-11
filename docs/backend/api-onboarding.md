@@ -223,7 +223,7 @@ In short:
 
 ### Chat tool: search_my_documents
 
-- Defined in **`chat/tools.py`** as an OpenAI-compatible function: name `search_my_documents`, single argument `query`.
+- Defined in **`chat/tools.py`** as a function-calling schema: name `search_my_documents`, single argument `query`.
 - **execute_search** in the same file calls **ProcessingService.rag_retrieve_multi** (same RAG as below), then returns `(context_text, sources)`.
 - The model is instructed (system prompt) to call this when the user asks about their notes/files/readings.
 

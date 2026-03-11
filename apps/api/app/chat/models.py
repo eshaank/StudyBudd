@@ -1,6 +1,4 @@
-"""SQLAlchemy models for chat and conversations.
+"""Placeholder for chat/conversation ORM models.
 
-Chat data (conversations, messages) currently lives in Supabase tables
-managed outside of Alembic.  This module is a placeholder for future
-migration to SQLAlchemy-managed tables.
+Chat data lives in Supabase tables managed outside Alembic for now.
 """

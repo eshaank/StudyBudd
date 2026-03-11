@@ -1,4 +1,4 @@
-"""Together AI LLM client for chat inference and structured generation."""
+"""Async LLM client wrapper for chat and JSON generation."""
 
 import json
 import logging

@@ -1,4 +1,3 @@
-"""Main FastAPI application entry point."""
 
 import logging
 import os

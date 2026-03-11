@@ -186,10 +186,6 @@ function LoginContent() {
             <Link className="text-indigo-700 dark:text-indigo-400 hover:underline" href="/signup">Sign up</Link>
           </p>
         </form>
-
-        <p className="text-xs text-slate-500 dark:text-slate-500 mt-6">
-          Auth note: This page now uses Supabase for email/password + Google OAuth.
-        </p>
       </div>
     </AuthLayout>
   );
