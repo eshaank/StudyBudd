@@ -123,7 +123,7 @@
 - 分享落地页：`apps/web/src/app/shared/[token]/page.js`
 
 文档：
-- 概览文档：`docs/document-sharing.md`
+- 概览文档：`document-sharing.md`（同目录）
 
 ## 7. 为什么这是“极简版”
 
