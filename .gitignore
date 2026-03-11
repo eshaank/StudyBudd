@@ -59,8 +59,3 @@ postgres_data/
 /playwright/.cache/
 /playwright/.auth/
 
-# Claude / Agents
-.claude/
-.agents/
-CLAUDE.md
-
