@@ -39,3 +39,5 @@ This folder contains documentation for the StudyBudd application. See [DOCS-STRU
 3. Start the backend: `cd apps/api && uvicorn app.main:app --reload --port 8000`
 4. Start the frontend: `cd apps/web && npm run dev`
 5. Visit `http://localhost:3000`
+
+For all run modes (Docker dev/prod, local, tests, lint) and troubleshooting, see the root **[RUNBOOK.md](../RUNBOOK.md)**.
