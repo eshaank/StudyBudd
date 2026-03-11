@@ -1,4 +1,4 @@
-"""Database configuration and session management."""
+"""Async SQLAlchemy engine and session factory."""
 
 from collections.abc import AsyncGenerator
 

@@ -1,9 +1,4 @@
-"""RAG tool definition and execution for the StudyBudd chat flow.
-
-Provides the ``search_my_documents`` tool schema (OpenAI-compatible format)
-and an ``execute_search`` helper that runs multi-document vector retrieval
-and returns context text + source attribution metadata.
-"""
+"""RAG tool definition and execution for the StudyBudd chat flow."""
 
 from __future__ import annotations
 

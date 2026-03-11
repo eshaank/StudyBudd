@@ -1,4 +1,4 @@
-"""Business logic for document operations."""
+"""Document upload, sharing, and metadata management."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ ALLOWED_MIME_TYPES: dict[str, str] = {
 
 
 class DocumentService:
-    """Service class for document operations."""
+    """Handles file uploads, sharing, and metadata management."""
 
     MAX_SHARE_RECIPIENTS = 50
 
@@ -127,16 +127,6 @@ class DocumentService:
         user_id: UUID,
         folder_id: UUID | None = None,
     ) -> list[Document]:
-        """Get documents for a user, optionally filtered by folder.
-
-        Args:
-            db: Database session.
-            user_id: The user's ID.
-            folder_id: If provided, return only docs in this folder.
-
-        Returns:
-            List of documents ordered by creation date (newest first).
-        """
         stmt = select(Document).where(Document.user_id == user_id)
         if folder_id is not None:
             stmt = stmt.where(Document.folder_id == folder_id)
@@ -149,16 +139,6 @@ class DocumentService:
         document_id: UUID,
         user_id: UUID,
     ) -> Document | None:
-        """Get a document by ID for a specific user.
-
-        Args:
-            db: Database session.
-            document_id: The document's ID.
-            user_id: The user's ID (for ownership check).
-
-        Returns:
-            The document if found and owned by user, None otherwise.
-        """
         result = await db.execute(
             select(Document).where(
                 Document.id == document_id,
@@ -193,7 +173,6 @@ class DocumentService:
 
     @staticmethod
     def normalize_recipient_emails(recipient_emails: list[str]) -> list[str]:
-        """Normalize, validate and deduplicate recipient emails."""
         normalized: list[str] = []
         seen: set[str] = set()
 
@@ -223,7 +202,6 @@ class DocumentService:
 
     @staticmethod
     def build_share_url(share_token: str) -> str:
-        """Build frontend share URL from token."""
         base = settings.web_base_url.rstrip("/")
         return f"{base}/shared/{share_token}"
 
@@ -291,7 +269,6 @@ class DocumentService:
         db: AsyncSession,
         share_token: str,
     ) -> tuple[DocumentShare, Document, list[str]] | None:
-        """Get share, linked document, and recipients by token."""
         share = await db.scalar(
             select(DocumentShare).where(DocumentShare.share_token == share_token)
         )

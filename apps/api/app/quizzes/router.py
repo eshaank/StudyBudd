@@ -1,4 +1,3 @@
-"""API router for quiz endpoints."""
 
 from __future__ import annotations
 

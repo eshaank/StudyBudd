@@ -1,4 +1,3 @@
-"""SQLAlchemy models for document processing (simple RAG)."""
 
 from __future__ import annotations
 

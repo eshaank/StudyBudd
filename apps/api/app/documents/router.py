@@ -1,4 +1,3 @@
-"""API router for document endpoints."""
 
 from __future__ import annotations
 

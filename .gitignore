@@ -49,8 +49,6 @@ postgres_data/
 # IDE
 .vscode/
 .idea/
-.cursor/
-
 
 # Playwright
 /test-results/
@@ -58,4 +56,3 @@ postgres_data/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
-

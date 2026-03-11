@@ -1,4 +1,4 @@
-"""Business logic for flashcard generation and CRUD."""
+"""Flashcard set generation and management via RAG pipeline."""
 
 from __future__ import annotations
 
@@ -29,7 +29,6 @@ PREVIEW_MAX_LEN = 200
 async def _resolve_source_documents(
     db: AsyncSession, user_id: UUID, document_ids: list
 ) -> list[SourceDocumentSummary]:
-    """Resolve document IDs to source document summaries (id, original_filename)."""
     if not document_ids:
         return []
     ids = [UUID(str(d)) if not isinstance(d, UUID) else d for d in document_ids]
@@ -50,7 +49,6 @@ def _enrich_set_response(
     source_documents: list[SourceDocumentSummary],
     source_chunks: list[SourceChunkSummary],
 ) -> FlashcardSetResponse:
-    """Attach source attribution to a set response."""
     return base.model_copy(
         update={
             "source_documents": source_documents,
@@ -60,7 +58,7 @@ def _enrich_set_response(
 
 
 class FlashcardService:
-    """Service for generating, listing, and managing flashcard sets."""
+    """Handles flashcard set generation and retrieval."""
 
     @staticmethod
     async def generate(
@@ -173,7 +171,6 @@ class FlashcardService:
 
     @staticmethod
     async def list_sets(db: AsyncSession, user_id: UUID) -> list[FlashcardSetSummary]:
-        """Return all flashcard sets for a user (lightweight, no cards)."""
         stmt = (
             select(
                 FlashcardSet,
@@ -202,7 +199,6 @@ class FlashcardService:
     async def get_set(
         db: AsyncSession, user_id: UUID, set_id: UUID
     ) -> FlashcardSetResponse:
-        """Get a single flashcard set with all cards and source attribution."""
         fset = await db.scalar(
             select(FlashcardSet).where(
                 FlashcardSet.id == set_id,
@@ -223,7 +219,6 @@ class FlashcardService:
 
     @staticmethod
     async def delete_set(db: AsyncSession, user_id: UUID, set_id: UUID) -> None:
-        """Delete a flashcard set (cards cascade)."""
         fset = await db.scalar(
             select(FlashcardSet).where(
                 FlashcardSet.id == set_id,

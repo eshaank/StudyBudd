@@ -1,4 +1,3 @@
-"""API router for folder endpoints."""
 
 from __future__ import annotations
 

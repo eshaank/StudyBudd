@@ -1,4 +1,3 @@
-"""API router for document processing endpoints (simple RAG)."""
 
 from __future__ import annotations
 

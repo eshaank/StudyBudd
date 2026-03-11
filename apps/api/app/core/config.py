@@ -1,4 +1,4 @@
-"""Application configuration using Pydantic settings."""
+"""Settings management and environment variable resolution."""
 
 import re
 from functools import lru_cache

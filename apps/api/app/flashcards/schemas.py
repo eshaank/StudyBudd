@@ -1,4 +1,3 @@
-"""Pydantic schemas for flashcard endpoints."""
 
 from __future__ import annotations
 

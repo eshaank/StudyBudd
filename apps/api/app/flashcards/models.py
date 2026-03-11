@@ -1,4 +1,3 @@
-"""SQLAlchemy models for flashcard sets and individual cards."""
 
 from __future__ import annotations
 

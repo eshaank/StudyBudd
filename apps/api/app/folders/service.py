@@ -1,4 +1,4 @@
-"""Business logic for folder operations."""
+"""Folder CRUD and document-to-folder assignment."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class FolderService:
-    """Service class for folder CRUD and document assignment."""
+    """Organizes documents into user-defined folders."""
 
     @staticmethod
     async def create(db: AsyncSession, user_id: UUID, name: str) -> Folder:
@@ -28,7 +28,6 @@ class FolderService:
 
     @staticmethod
     async def list_by_user(db: AsyncSession, user_id: UUID) -> list[Folder]:
-        """List all folders owned by a user, ordered by name."""
         result = await db.execute(
             select(Folder)
             .where(Folder.user_id == user_id)
@@ -38,7 +37,6 @@ class FolderService:
 
     @staticmethod
     async def get_by_id(db: AsyncSession, folder_id: UUID, user_id: UUID) -> Folder | None:
-        """Get a folder by ID, verifying ownership."""
         result = await db.execute(
             select(Folder).where(
                 Folder.id == folder_id,
@@ -49,7 +47,6 @@ class FolderService:
 
     @staticmethod
     async def update(db: AsyncSession, folder: Folder, name: str) -> Folder:
-        """Rename a folder."""
         folder.name = name.strip()
         await db.commit()
         await db.refresh(folder)
@@ -58,7 +55,6 @@ class FolderService:
 
     @staticmethod
     async def delete(db: AsyncSession, folder: Folder) -> None:
-        """Delete a folder. Documents in the folder have their folder_id set to NULL (cascade rule)."""
         folder_id = folder.id
         await db.delete(folder)
         await db.commit()
@@ -97,7 +93,6 @@ class FolderService:
         folder_id: UUID,
         user_id: UUID,
     ) -> list[Document]:
-        """List documents in a specific folder (owned by user)."""
         result = await db.execute(
             select(Document)
             .where(Document.user_id == user_id, Document.folder_id == folder_id)

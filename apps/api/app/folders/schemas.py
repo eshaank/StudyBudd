@@ -1,4 +1,3 @@
-"""Pydantic schemas for folder API operations."""
 
 from __future__ import annotations
 

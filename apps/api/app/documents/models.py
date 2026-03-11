@@ -1,4 +1,3 @@
-"""SQLAlchemy models for the documents module."""
 
 from __future__ import annotations
 
@@ -102,7 +101,6 @@ class Document(Base, UUIDMixin, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        """Return string representation."""
         return f"<Document(id={self.id}, filename={self.filename}, user_id={self.user_id})>"
 
 
