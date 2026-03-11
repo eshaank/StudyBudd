@@ -42,7 +42,8 @@ apps/api/app/
 - **SQLAlchemy** - ORM
 - **PostgreSQL + pgvector** - Database with vector embeddings
 - **UV** - Package manager
-- **Alembic** - Database migrations
+
+Schema is managed manually (e.g. via Supabase SQL Editor or dashboard); there are no migration scripts in this repo.
 
 ## Development Setup
 
@@ -60,16 +61,6 @@ uv sync
 
 # Run development server
 uv run uvicorn app.main:app --reload
-```
-
-### Database Migrations
-
-```bash
-# Create a new migration
-uv run alembic revision --autogenerate -m "description"
-
-# Apply migrations
-uv run alembic upgrade head
 ```
 
 ## API Documentation
