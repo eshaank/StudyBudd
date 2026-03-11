@@ -1,4 +1,4 @@
-"""FastAPI dependencies for authentication and database access."""
+"""JWT validation, user extraction, and DB session injection."""
 
 import logging
 from collections.abc import AsyncGenerator

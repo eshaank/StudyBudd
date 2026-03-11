@@ -196,10 +196,6 @@ export default function SignupPage() {
             <Link className="text-indigo-700 dark:text-indigo-400 hover:underline" href="/login">Log in</Link>
           </p>
         </form>
-
-        <p className="text-xs text-slate-500 dark:text-slate-500 mt-6">
-          Auth note: Email signup may require confirmation depending on Supabase settings.
-        </p>
       </div>
     </AuthLayout>
   );

@@ -1,4 +1,3 @@
-"""API router for flashcard endpoints."""
 
 from __future__ import annotations
 

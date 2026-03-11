@@ -1,4 +1,3 @@
-"""Pydantic schemas for document processing + RAG."""
 
 from __future__ import annotations
 

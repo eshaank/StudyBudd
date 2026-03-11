@@ -1,4 +1,3 @@
-"""Pydantic schemas for quiz endpoints."""
 
 from __future__ import annotations
 

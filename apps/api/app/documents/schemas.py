@@ -1,4 +1,3 @@
-"""Pydantic schemas for document API operations."""
 
 from __future__ import annotations
 

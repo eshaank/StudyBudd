@@ -1,4 +1,3 @@
-"""SQLAlchemy models for quiz sets and questions."""
 
 from __future__ import annotations
 

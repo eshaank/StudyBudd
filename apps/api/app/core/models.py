@@ -1,4 +1,4 @@
-"""Shared SQLAlchemy base class and mixins for all modules."""
+"""Base declarative class and reusable model mixins."""
 
 from __future__ import annotations
 

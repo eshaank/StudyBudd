@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 chat_service = ChatService()
 
+# Chat endpoints: streaming QA with RAG tool calling, conversation history management
+
 
 @router.post("/", response_model=ChatResponse)
 async def chat(request: ChatRequest, user: CurrentUser):

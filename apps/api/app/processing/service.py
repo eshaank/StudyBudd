@@ -1,4 +1,4 @@
-"""Business logic for document processing and RAG."""
+"""Document chunking, embedding, and vector-based retrieval."""
 
 from __future__ import annotations
 
@@ -187,7 +187,7 @@ async def generate_answer(question: str, context: str) -> str:
 # ProcessingService
 # ----------------------------
 class ProcessingService:
-    """Service for processing documents into searchable chunks and running RAG queries."""
+    """Orchestrates RAG: chunking, embedding, storage, and retrieval."""
 
     @staticmethod
     async def process_document(
