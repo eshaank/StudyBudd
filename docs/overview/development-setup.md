@@ -11,7 +11,7 @@ This guide explains how to set up your local development environment for StudyBu
 
 ## Environment Variables
 
-Create a `.env` file in the **project root** (`/study-budd/.env`). Copy from `docs/env.example` and fill in your values.
+Create a `.env` file in the **project root** (e.g. `StudyBudd/.env`). Copy from `docs/env.example` and fill in your values.
 
 ### Required Variables
 
@@ -55,7 +55,7 @@ DEV_USER_ID=00000000-0000-0000-0000-000000000001
 # From project root
 ./docker-run.sh
 # or
-make dev
+just dev
 ```
 
 Requires `.env` in project root. Services:
@@ -66,7 +66,7 @@ Requires `.env` in project root. Services:
 **View logs:**
 
 ```bash
-make logs
+just logs
 # or
 docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
 ```
