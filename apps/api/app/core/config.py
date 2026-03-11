@@ -104,30 +104,6 @@ class Settings(BaseSettings):
         encoded_password = quote_plus(self.db_password)
         return f"postgresql+asyncpg://{self.db_user}:{encoded_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
-    @computed_field
-    @property
-    def migration_database_url(self) -> str:
-        """URL for migrations. Uses DB_MIGRATION_HOST if set (e.g. Supabase direct), else database_url."""
-        migration_host = (self.db_migration_host or "").strip()
-        if not migration_host:
-            return self.database_url
-        # When DATABASE_URL is set, replace only the host so credentials/port/db stay correct
-        if self.database_url_raw:
-            url = self.database_url
-            parsed = urlparse(url)
-            if "@" in parsed.netloc:
-                userinfo, hostport = parsed.netloc.rsplit("@", 1)
-                port = "5432"
-                if ":" in hostport:
-                    _, port = hostport.rsplit(":", 1)
-                new_netloc = f"{userinfo}@{migration_host}:{port}"
-                return urlunparse(parsed._replace(netloc=new_netloc))
-        # Build from components
-        encoded_password = quote_plus(self.db_password)
-        return f"postgresql+asyncpg://{self.db_user}:{encoded_password}@{migration_host}:{self.db_port}/{self.db_name}"
-
-    # Security
-    secret_key: str = "change-me-in-production"
 
     # Supabase
     supabase_url: str = ""
