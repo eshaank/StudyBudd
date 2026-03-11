@@ -50,18 +50,6 @@ api:
     cd apps/api && . .venv/bin/activate && uv run uvicorn app.main:app --reload
 
 # =============================================================================
-# Database
-# =============================================================================
-
-# Run database migrations
-db-migrate:
-    cd apps/api && uv run alembic upgrade head
-
-# Create a new migration: just db-revision "description"
-db-revision msg:
-    cd apps/api && uv run alembic revision --autogenerate -m "{{msg}}"
-
-# =============================================================================
 # Setup
 # =============================================================================
 

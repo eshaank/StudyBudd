@@ -14,7 +14,6 @@ dependencies = [
     "asyncpg>=0.30.0",
     "greenlet>=3.0.0",
     "pgvector>=0.3.0",
-    "alembic>=1.14.0",
     "psycopg2-binary>=2.9.0",
     "python-dotenv>=1.0.0",
     "httpx>=0.28.0",
@@ -47,7 +46,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["app*"]
-exclude = ["alembic*", "tests*"]
+exclude = ["tests*"]
 
 [tool.ruff]
 target-version = "py312"
