@@ -17,7 +17,6 @@ export default function ContactPage() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    // TODO: Connect to backend
     setSubmitted(true);
   }
 

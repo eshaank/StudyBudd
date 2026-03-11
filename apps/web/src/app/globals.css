@@ -132,39 +132,31 @@ body {
   }
 }
 
-/* =========================
-   Liquid Navbar (FIXED)
-   ========================= */
-
-/* IMPORTANT:
-   - overflow must be visible so dropdowns can show
-   - BUT we must prevent blob layers from "washing" the page
-   - So we isolate layers and keep blobs behind content.
-*/
+/* Liquid navbar layers */
 .liquid-nav {
   position: relative;
-  overflow: visible;          /* ✅ dropdowns can escape */
-  isolation: isolate;         /* ✅ creates a safe stacking context */
-  border-radius: 1rem;        /* matches rounded-2xl feel */
+  overflow: visible;
+  isolation: isolate;
+  border-radius: 1rem;
   background: rgba(2, 6, 23, 0.42);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.65);
 }
 
-/* blob layers - keep BEHIND content */
+/* Blob layers stay behind content */
 .liquid-nav::before,
 .liquid-nav::after {
   content: "";
   position: absolute;
   inset: -60px;
-  z-index: -1;               /* ✅ behind the navbar content */
+  z-index: -1;
   background:
     radial-gradient(circle at 20% 30%, rgba(99,102,241,0.40), transparent 45%),
     radial-gradient(circle at 70% 20%, rgba(59,130,246,0.35), transparent 48%),
     radial-gradient(circle at 60% 80%, rgba(168,85,247,0.30), transparent 52%);
-  filter: blur(26px);        /* slightly higher blur = softer */
-  opacity: 0.75;             /* reduced so it doesn’t tint the page */
+  filter: blur(26px);
+  opacity: 0.75;
   transform: translate3d(0, 0, 0);
   animation: liquidFloat 10s ease-in-out infinite;
   pointer-events: none;
@@ -177,7 +169,7 @@ body {
   animation-direction: reverse;
 }
 
-/* shimmer layer (also behind content) */
+/* Shimmer layer */
 .liquid-nav > .relative::before {
   content: "";
   position: absolute;
@@ -262,19 +254,16 @@ body {
   100% { transform: translateX(80%); opacity: 0.0; }
 }
 
-/* =========================
-   Liquid Header (FIXED)
-   ========================= */
-
+/* Liquid header */
 .liquid-header {
   position: relative;
-  overflow: hidden;          /* ✅ keep header blobs contained */
+  overflow: hidden;
   background: rgba(2, 6, 23, 0.65);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* header blobs - toned down */
+/* Header blobs */
 .liquid-header::before,
 .liquid-header::after {
   content: "";
@@ -469,4 +458,3 @@ body {
   border-radius: 16px;
   overflow: hidden;
 }
-

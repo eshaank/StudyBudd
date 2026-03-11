@@ -2,21 +2,12 @@
 
 export default function ShareModal({
   shareDoc,
-  shareEmail,
-  setShareEmail,
-  shareRecipients,
-  shareSuggestions,
   copyLinkDone,
   copyLinkLoading,
   shareLink,
-  isSharing,
   shareError,
   shareInputRef,
-  onAddRecipient,
-  onRemoveRecipient,
-  onKeyDown,
   onCopyLink,
-  onShare,
   onClose,
 }) {
   const displayUrl =

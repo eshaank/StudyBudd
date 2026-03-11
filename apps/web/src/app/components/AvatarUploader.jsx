@@ -36,7 +36,6 @@ export default function AvatarUploader() {
       setUser(u);
       if (!u) return;
 
-      // ✅ select("*") so it doesn't crash if avatar_path isn't in your schema
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("*")
