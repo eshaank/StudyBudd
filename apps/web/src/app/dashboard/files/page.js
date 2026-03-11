@@ -116,11 +116,6 @@ export default function FilesPage() {
     if (error) setToastMessage(error);
   }, [query]);
 
-  const handleShareAction = useCallback(async () => {
-    const msg = await share.handleShare();
-    if (msg) setToastMessage(msg);
-  }, [share]);
-
   // --- Render ---
   return (
     <div className="space-y-4">
@@ -271,21 +266,12 @@ export default function FilesPage() {
       {share.shareDoc && (
         <ShareModal
           shareDoc={share.shareDoc}
-          shareEmail={share.shareEmail}
-          setShareEmail={share.setShareEmail}
-          shareRecipients={share.shareRecipients}
-          shareSuggestions={share.shareSuggestions}
           copyLinkDone={share.copyLinkDone}
           copyLinkLoading={share.copyLinkLoading}
           shareLink={share.shareLink}
-          isSharing={share.isSharing}
           shareError={share.shareError}
           shareInputRef={share.shareInputRef}
-          onAddRecipient={share.addRecipient}
-          onRemoveRecipient={share.removeRecipient}
-          onKeyDown={share.handleKeyDown}
           onCopyLink={share.handleCopyLink}
-          onShare={handleShareAction}
           onClose={share.close}
         />
       )}
