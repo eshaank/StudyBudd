@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import PomodoroTimer from "../components/PomodorTimer"; 
+import PomodoroTimer from "../components/PomodorTimer";
 export default function FeaturesPage() {
   const [activeTab, setActiveTab] = useState("search");
 
@@ -81,10 +81,23 @@ export default function FeaturesPage() {
                 </ul>
               </div>
 
-              <div className="bg-white rounded-lg shadow-xl p-8 h-64 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <p className="text-gray-500 text-lg">Animation placeholder</p>
+              <div className="bg-white rounded-lg shadow-xl p-8 h-64">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 h-full flex flex-col justify-between">
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm text-slate-500">
+                    Search your notes, slides, and saved sources
+                  </div>
+                  <div className="space-y-3">
+                    <div className="rounded-xl bg-white p-4 border border-slate-200">
+                      <div className="h-3 w-24 rounded bg-blue-100" />
+                      <div className="mt-3 h-3 w-full rounded bg-slate-200" />
+                      <div className="mt-2 h-3 w-5/6 rounded bg-slate-200" />
+                    </div>
+                    <div className="rounded-xl bg-white p-4 border border-slate-200">
+                      <div className="h-3 w-20 rounded bg-green-100" />
+                      <div className="mt-3 h-3 w-full rounded bg-slate-200" />
+                      <div className="mt-2 h-3 w-4/6 rounded bg-slate-200" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -94,7 +107,6 @@ export default function FeaturesPage() {
             <div className="grid md:grid-cols-2 gap-8 items-start">
               {/* Left: Timer */}
               <div className="order-2 md:order-1">
-                {/* ✅ remove the fixed height so the timer can render fully */}
                 <PomodoroTimer />
               </div>
 
