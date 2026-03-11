@@ -30,7 +30,6 @@ study-budd/
 │       │   ├── schemas/
 │       │   ├── services/
 │       │   └── core/
-│       ├── alembic/
 │       ├── tests/
 │       ├── pyproject.toml
 │       └── Dockerfile
@@ -133,7 +132,6 @@ Run `make help` to see all available commands:
 | `make clean` | Stop services and remove volumes |
 | `make web-dev` | Run frontend locally |
 | `make api-dev` | Run API locally |
-| `make db-migrate` | Run database migrations |
 | `make install` | Install all dependencies |
 
 ## API Documentation

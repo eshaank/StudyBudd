@@ -74,10 +74,7 @@ If you move files, update these references:
 3. **docs/rag-pipeline-diagram.md** (→ `backend/processing/rag-pipeline-diagram.md`)  
    - “Generated from `docs/rag-flow.md`” → `docs/backend/processing/rag-flow.md`
 
-4. **apps/api/alembic/versions/**  
-   - References to `docs/rag-setup.md` → `docs/backend/processing/rag-setup.md`
-
-5. **docs/README.md**  
+4. **docs/README.md**  
    - All links should point into the new paths (overview, backend, frontend, testing).
 
 ## Optional: Flatter Backend

@@ -101,15 +101,9 @@ ln -s ../../.env apps/web/.env
 
 ---
 
-## Database Migrations
+## Database schema
 
-Migrations run against Supabase Postgres. From project root:
-
-```bash
-make db-migrate
-# or
-cd apps/api && uv run alembic upgrade head
-```
+Schema is managed manually (e.g. Supabase Dashboard → SQL Editor or Table Editor). There are no migration commands in this repo.
 
 ---
 

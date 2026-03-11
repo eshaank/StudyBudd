@@ -104,8 +104,13 @@
 - 分享链接组装：后端用 `WEB_BASE_URL` + `/shared/{token}` 生成 `share_url`。  
   代码：`apps/api/app/documents/service.py:225`、`apps/api/app/core/config.py:137`
 
-- 前端支持“只生成 link 不填邮箱”与“按邮箱限制分享”两种模式。  
-  代码：`apps/web/src/app/dashboard/files/hooks/useShareModal.js:74`、`apps/web/src/app/dashboard/files/hooks/useShareModal.js:102`
+后端：
+- 配置分享链接基地址：`apps/api/app/core/config.py`
+- ORM 模型：`apps/api/app/documents/models.py`
+- 分享 DTO：`apps/api/app/documents/schemas.py`
+- 分享业务逻辑：`apps/api/app/documents/service.py`
+- 分享路由：`apps/api/app/documents/router.py`
+- Storage 下载：`apps/api/app/core/supabase.py`
 
 - Shared 落地页使用当前 Supabase session access token 调用受保护 API，并支持一键 `Save to my library`。  
   代码：`apps/web/src/app/shared/[token]/page.js:11`、`apps/web/src/app/shared/[token]/page.js:58`、`apps/web/src/app/shared/[token]/page.js:81`
@@ -118,5 +123,12 @@
 1. 当前 `ac-avatar-account` 分支的 Files 页 share modal 已经接到真实 share API，不再是纯 mock。  
    证据：`apps/web/src/app/dashboard/files/hooks/useShareModal.js:88`、`apps/web/src/app/dashboard/files/hooks/useShareModal.js:108`
 
-2. 当前 shared page 的主流程是 `Save to my library`，不是直接下载；不过后端 `download` 路由仍然保留，后续如果要恢复“直接下载”按钮，后端不需要重写。  
-   代码：`apps/api/app/documents/router.py:194`、`apps/web/src/app/shared/[token]/page.js:81`
+当前只保留最核心闭环：
+- token 生成
+- 邮箱白名单授权
+- 元数据访问
+- 文件下载
+
+## 8. 已知环境注意事项
+
+数据库 schema 在本项目中为手动维护（如通过 Supabase SQL Editor），无迁移脚本。
