@@ -1,7 +1,7 @@
 # StudyBudd
 
 A full-stack study application with AI-powered features including document chat, flashcards, quizzes, and a Pomodoro timer.
-
+Made as a group project for CSE 115A Software Engineering 1 @ UCSC
 ## Tech Stack
 
 
