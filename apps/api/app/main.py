@@ -4,10 +4,9 @@ import os
 import time
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
-from pydantic import BaseModel
 from supabase import create_client, Client
 
 from app.core.config import get_settings
@@ -111,14 +110,7 @@ app.include_router(flashcards_router, prefix="/api")
 # Quizzes router (AI-generated quiz sets)
 app.include_router(quizzes_router, prefix="/api")
 
-# --- 5. Data Models (Legacy/Auth) ---
-
-class UserCredentials(BaseModel):
-    """Schema for user login and registration."""
-    email: str
-    password: str
-
-# --- 6. Global API Endpoints ---
+# --- 5. Global API Endpoints ---
 
 @app.get("/")
 async def root() -> dict[str, str]:
@@ -133,43 +125,7 @@ async def health_check():
         "database_connected": supabase is not None
     }
 
-@app.post("/api/auth/signup")
-async def sign_up(credentials: UserCredentials):
-    """Registers a new user using Supabase Auth."""
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Database configuration missing.")
-
-    try:
-        response = supabase.auth.sign_up({
-            "email": credentials.email,
-            "password": credentials.password
-        })
-        return {"message": "User registered successfully", "user": response.user}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.post("/api/auth/login")
-async def login(credentials: UserCredentials):
-    """Logs in an existing user and returns an access token."""
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Database configuration missing.")
-
-    try:
-        response = supabase.auth.sign_in_with_password({
-            "email": credentials.email,
-            "password": credentials.password
-        })
-        return {
-            "access_token": response.session.access_token,
-            "user": {
-                "id": response.user.id,
-                "email": response.user.email
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
-
-# --- 7. Local Execution ---
+# --- 6. Local Execution ---
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

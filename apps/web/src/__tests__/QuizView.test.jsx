@@ -1,8 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import QuizView from "../features/quiz/components/QuizView";
+import QuizView from "../app/dashboard/quizzes/components/QuizView";
 
 // Mock FeedbackPanel
-jest.mock("../features/quiz/components/FeedbackPanel", () => {
+jest.mock("../app/dashboard/quizzes/components/FeedbackPanel", () => {
   return function MockFeedbackPanel({ onNext, isLast }) {
     return (
       <div data-testid="feedback-panel">

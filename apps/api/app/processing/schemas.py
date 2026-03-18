@@ -7,12 +7,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class ProcessRequest(BaseModel):
-    """Text payload to chunk + embed + store."""
-    title: str = Field(default="untitled")
-    text: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
 
 class ProcessingStatusResponse(BaseModel):
     """Response schema for processing status."""

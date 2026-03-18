@@ -13,6 +13,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import text
+
 from app.core.config import get_settings
 from app.core.database import async_session_maker
 
@@ -181,6 +183,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         AsyncSession: SQLAlchemy async session.
     """
     async with async_session_maker() as session:
+        # Supabase: include extensions so unqualified "vector" resolves (pgvector may be in public or extensions)
+        if "supabase" in settings.database_url or "supabase" in settings.db_host:
+            await session.execute(text("SET search_path TO public, extensions, vector_db"))
         yield session
 
 
