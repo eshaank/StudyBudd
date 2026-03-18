@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -74,7 +75,6 @@ class FolderService:
         if folder_id is not None:
             folder = await FolderService.get_by_id(db, folder_id, user_id)
             if folder is None:
-                from fastapi import HTTPException
                 raise HTTPException(status_code=404, detail="Folder not found.")
 
         document.folder_id = folder_id

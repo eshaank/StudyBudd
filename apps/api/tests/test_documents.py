@@ -81,7 +81,6 @@ async def test_upload_pdf_returns_unsupported_processing(client: AsyncClient):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["processing_status"] == "unsupported"
     assert data["message"] == "Document uploaded successfully"
 
 

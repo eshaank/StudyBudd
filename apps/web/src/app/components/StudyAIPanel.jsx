@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { useStudyAIPanel } from "../app/components/StudyAIPanelProvider";
+import { useStudyAIPanel } from "./StudyAIPanelProvider";
 
 /**
  * Inline AI chat panel that sits alongside the main content.

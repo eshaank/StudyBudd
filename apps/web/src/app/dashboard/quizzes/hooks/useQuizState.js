@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowser } from "../../../lib/supabase/client";
-import { usePomodoro } from "../../../app/components/PomodoroProvider";
+import { createSupabaseBrowser } from "../../../../lib/supabase/client";
+import { usePomodoro } from "../../../components/PomodoroProvider";
 import { useShake } from "./useShake";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";

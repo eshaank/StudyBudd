@@ -7,7 +7,7 @@ import { FolderOpen, MessageSquare, Brain, Layers, ChevronRight } from "lucide-r
 
 import PomodoroSidebarCard from "../components/PomodoroSidebarCard";
 import { StudyAIPanelProvider, useStudyAIPanel } from "../components/StudyAIPanelProvider";
-import StudyAIPanel from "../../components/StudyAIPanel";
+import StudyAIPanel from "../components/StudyAIPanel";
 
 const NAV = [
   { href: "/dashboard/files", label: "Files", desc: "Your study library", icon: FolderOpen },

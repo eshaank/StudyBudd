@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { ClipboardList } from "lucide-react";
-import { useQuizState } from "./hooks/useQuizState";
-import QuizStyles from "./components/QuizStyles";
-import QuizView from "./components/QuizView";
-import ResultsView from "./components/ResultsView";
-import QuizSetSwitcher from "./components/QuizSetSwitcher";
-import GenerateQuizModal from "./components/GenerateQuizModal";
-import { useStudyAIPanel } from "../../app/components/StudyAIPanelProvider";
+import { useQuizState } from "../hooks/useQuizState";
+import QuizStyles from "./QuizStyles";
+import QuizView from "./QuizView";
+import ResultsView from "./ResultsView";
+import QuizSetSwitcher from "./QuizSetSwitcher";
+import GenerateQuizModal from "./GenerateQuizModal";
+import { useStudyAIPanel } from "../../../components/StudyAIPanelProvider";
 
 const ACCENT = "#6366f1";
 

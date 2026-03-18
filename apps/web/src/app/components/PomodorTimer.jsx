@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePomodoro } from "./PomodoroProvider";
+import ModeBtn from "./pomodoro/ModeBtn";
+import TimeInput from "./pomodoro/TimeInput";
 
 const ChevronIcon = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -104,6 +106,7 @@ export default function PomodoroTimer() {
           active={mode === "focus"}
           activeClass="bg-indigo-600 text-white"
           onClick={() => switchMode("focus")}
+          size="md"
         >
           Focus
         </ModeBtn>
@@ -111,6 +114,7 @@ export default function PomodoroTimer() {
           active={mode === "shortBreak"}
           activeClass="bg-emerald-600 text-white"
           onClick={() => switchMode("shortBreak")}
+          size="md"
         >
           Short
         </ModeBtn>
@@ -118,6 +122,7 @@ export default function PomodoroTimer() {
           active={mode === "longBreak"}
           activeClass="bg-blue-600 text-white"
           onClick={() => switchMode("longBreak")}
+          size="md"
         >
           Long
         </ModeBtn>
@@ -184,6 +189,7 @@ export default function PomodoroTimer() {
                 max={180}
                 disabled={isRunning}
                 onChange={(value) => updateDraft("studyMinutes", value)}
+                size="md"
               />
               <TimeInput
                 label="Short break"
@@ -193,6 +199,7 @@ export default function PomodoroTimer() {
                 max={60}
                 disabled={isRunning}
                 onChange={(value) => updateDraft("shortBreakMinutes", value)}
+                size="md"
               />
               <TimeInput
                 label="Long break"
@@ -202,6 +209,7 @@ export default function PomodoroTimer() {
                 max={90}
                 disabled={isRunning}
                 onChange={(value) => updateDraft("longBreakMinutes", value)}
+                size="md"
               />
               <TimeInput
                 label="Every"
@@ -211,6 +219,7 @@ export default function PomodoroTimer() {
                 max={10}
                 disabled={isRunning}
                 onChange={(value) => updateDraft("longBreakEvery", value)}
+                size="md"
               />
             </div>
 
@@ -228,39 +237,6 @@ export default function PomodoroTimer() {
           <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Pause timer to edit times.</p>
         )}
       </div>
-    </div>
-  );
-}
-
-function ModeBtn({ active, activeClass, onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        "py-2 text-sm font-bold transition",
-        active ? activeClass : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700",
-      ].join(" ")}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
-
-function TimeInput({ label, suffix, value, onChange, min, max, disabled }) {
-  return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3">
-      <div className="text-xs font-bold text-slate-500 dark:text-slate-400">{label}</div>
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1.5 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 disabled:opacity-50"
-      />
-      <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{suffix}</div>
     </div>
   );
 }

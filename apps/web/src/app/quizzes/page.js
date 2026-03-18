@@ -1,6 +1,6 @@
 "use client";
 
-import QuizPage from "../../features/quiz/QuizPage";
+import QuizPage from "../dashboard/quizzes/components/QuizPageContent";
 
 export default function QuizzesRoute() {
   return <QuizPage />;

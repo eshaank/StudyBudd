@@ -1,8 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import ResultsView from "../features/quiz/components/ResultsView";
+import ResultsView from "../app/dashboard/quizzes/components/ResultsView";
 
 // Mock ProgressRing
-jest.mock("../features/quiz/components/ProgressRing", () => {
+jest.mock("../app/dashboard/quizzes/components/ProgressRing", () => {
   return function MockProgressRing({ pct }) {
     return <div data-testid="progress-ring">{pct}%</div>;
   };
